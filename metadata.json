@@ -1,0 +1,6 @@
+{
+  "name": "DABACO - Budget Control Management System | PT Ajinomoto Indonesia - PT Ajinex International, Mojokerto Factory",
+  "description": "Sistem controlling budget cost management enterprise PT Ajinomoto Indonesia - PT Ajinex International, Mojokerto Factory terintegrasi Google Sheets, Looker Studio, notifikasi email otomatis, ekspor PDF/CSV, enkripsi data, dan konektor Supabase & Perbankan.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
