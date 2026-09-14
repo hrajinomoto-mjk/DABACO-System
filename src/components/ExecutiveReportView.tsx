@@ -43,7 +43,6 @@ import {
   RealizationRecord,
   MasterCostCenter,
   MasterItem,
-  CategoryDetail,
   ItemSummary,
   MonthlyComparison
 } from '../types';
@@ -52,7 +51,6 @@ import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS } from '../mockData';
 import { AjinomotoLogo } from './AjinomotoLogo';
 import { ExecutivePresentationDeck } from './ExecutivePresentationDeck';
 import { DownloadConfirmModal } from './DownloadConfirmModal';
-import { autoDetectCategory } from '../utils/categoryDetector';
 
 interface ExecutiveReportViewProps {
   budget: BudgetRecord[];
@@ -177,41 +175,33 @@ export const ExecutiveReportView: React.FC<ExecutiveReportViewProps> = ({
       .sort((a, b) => b.budget - a.budget);
   }, [costCenters, filteredBudget, filteredForecast, filteredRealization]);
 
-  // Category breakdown
-  const categoryAnalysis = useMemo(() => {
+  // Pos Item breakdown (Top Expense Items)
+  const itemAnalysis = useMemo(() => {
     const map: Record<string, { budget: number; forecast: number; actual: number }> = {};
-    
-    // Create master item category lookup
-    const itemCatLookup: Record<string, string> = {};
-    masterItems.forEach(mi => {
-      itemCatLookup[mi.code] = mi.category;
-      if (mi.name) itemCatLookup[mi.name] = mi.category;
-      itemCatLookup[mi.code.toLowerCase()] = mi.category;
-      if (mi.name) itemCatLookup[mi.name.toLowerCase()] = mi.category;
-    });
 
     filteredBudget.forEach(r => {
-      const cat = itemCatLookup[r.item] || itemCatLookup[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
-      if (!map[cat]) map[cat] = { budget: 0, forecast: 0, actual: 0 };
-      map[cat].budget += r.amount;
+      const item = r.item || 'Biaya Operasional Lainnya';
+      if (!map[item]) map[item] = { budget: 0, forecast: 0, actual: 0 };
+      map[item].budget += r.amount;
     });
 
     filteredForecast.forEach(r => {
-      const cat = itemCatLookup[r.item] || itemCatLookup[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
-      if (!map[cat]) map[cat] = { budget: 0, forecast: 0, actual: 0 };
-      map[cat].forecast += r.amount;
+      const item = r.item || 'Biaya Operasional Lainnya';
+      if (!map[item]) map[item] = { budget: 0, forecast: 0, actual: 0 };
+      map[item].forecast += r.amount;
     });
 
     filteredRealization.forEach(r => {
-      const cat = itemCatLookup[r.item] || itemCatLookup[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
-      if (!map[cat]) map[cat] = { budget: 0, forecast: 0, actual: 0 };
-      map[cat].actual += r.amount;
+      const item = r.item || 'Biaya Operasional Lainnya';
+      if (!map[item]) map[item] = { budget: 0, forecast: 0, actual: 0 };
+      map[item].actual += r.amount;
     });
 
-    return Object.entries(map).map(([category, vals]) => {
+    return Object.entries(map).map(([item, vals]) => {
       const rate = vals.forecast > 0 ? (vals.actual / vals.forecast) * 100 : 0;
       return {
-        category,
+        category: item, // passed to PresentationDeck item card
+        item,
         budget: vals.budget,
         forecast: vals.forecast,
         actual: vals.actual,
@@ -219,35 +209,19 @@ export const ExecutiveReportView: React.FC<ExecutiveReportViewProps> = ({
         rate
       };
     }).sort((a, b) => b.actual - a.actual);
-  }, [masterItems, filteredBudget, filteredForecast, filteredRealization]);
+  }, [filteredBudget, filteredForecast, filteredRealization]);
 
   // Derived payload for PDF export
   const handleExportPDF = () => {
-    const categoriesPayload: CategoryDetail[] = categoryAnalysis.map(c => ({
-      category: c.category,
-      budget: c.budget,
-      forecast: c.forecast,
-      realization: c.actual,
-      diffFB: c.budget - c.forecast,
-      diffFR: c.forecast - c.actual,
-      usage: c.rate,
-      remarks: [c.rate > 100 ? 'Overbudget risk' : 'Controlled within bounds']
+    const itemsPayload: ItemSummary[] = itemAnalysis.map(i => ({
+      item: i.category,
+      budget: i.budget,
+      forecast: i.forecast,
+      realization: i.actual,
+      diffBF: i.budget - i.forecast,
+      diffFA: i.forecast - i.actual,
+      usage: i.rate
     }));
-
-    const itemsPayload: ItemSummary[] = masterItems.map(mi => {
-      const bAmt = filteredBudget.filter(r => r.item === mi.code).reduce((s, r) => s + r.amount, 0);
-      const fAmt = filteredForecast.filter(r => r.item === mi.code).reduce((s, r) => s + r.amount, 0);
-      const aAmt = filteredRealization.filter(r => r.item === mi.code).reduce((s, r) => s + r.amount, 0);
-      return {
-        item: mi.name,
-        budget: bAmt,
-        forecast: fAmt,
-        realization: aAmt,
-        diffBF: bAmt - fAmt,
-        diffFA: fAmt - aAmt,
-        usage: fAmt > 0 ? (aAmt / fAmt) * 100 : 0
-      };
-    }).filter(i => i.budget > 0 || i.forecast > 0 || i.realization > 0);
 
     const monthlyPayload = monthlyChartData.map(m => ({
       month: m.month,
@@ -262,7 +236,7 @@ export const ExecutiveReportView: React.FC<ExecutiveReportViewProps> = ({
       totalBudget,
       totalForecast,
       totalActual,
-      categories: categoriesPayload,
+      categories: [],
       items: itemsPayload,
       monthlyData: monthlyPayload,
       darkTheme: darkMode
@@ -889,7 +863,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
         netSavings={netSavings}
         absorptionRate={absorptionRate}
         departmentPerformance={departmentPerformance}
-        categoryAnalysis={categoryAnalysis}
+        categoryAnalysis={itemAnalysis}
         monthlyChartData={monthlyChartData}
       />
 

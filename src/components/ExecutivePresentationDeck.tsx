@@ -189,7 +189,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
   const slideTitles = [
     { title: 'Makro Finansial & Health', subtitle: 'Pagu, Realisasi & Koridor' },
     { title: 'Kinerja Cost Center', subtitle: 'Evaluasi per Departemen' },
-    { title: 'Struktur Komponen Biaya', subtitle: 'Distribusi OPEX & Beban' },
+    { title: 'Struktur Pos Item Beban', subtitle: 'Distribusi Pos Item Pengeluaran' },
     { title: 'Pacing & Siklus FY', subtitle: 'Tren Bulanan Apr - Mar' },
     { title: 'Resolusi & Keputusan', subtitle: 'Pengesahan Direksi' }
   ];
@@ -811,25 +811,25 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                   isDark ? 'bg-purple-950/70 text-purple-300 border-purple-500/40 shadow-xs' : 'bg-purple-50 text-purple-700 border-purple-200'
                 }`}>
                   <PieChart className="w-3.5 h-3.5" />
-                  <span>Slide 3: Struktur Komponen Biaya & Beban Kerja</span>
+                  <span>Slide 3: Rincian Pos Item Beban Operasional</span>
                 </div>
                 <h2
                   className={`text-2xl sm:text-4xl font-black tracking-tight ${
                     isDark ? '!text-white' : '!text-slate-950'
                   }`}
                 >
-                  Distribusi Pos Pengeluaran Operasional
+                  Distribusi Pos Item Pengeluaran Terbesar
                 </h2>
                 <p
                   className={`text-xs sm:text-sm max-w-2xl mx-auto leading-relaxed ${
                     isDark ? 'text-slate-200 font-medium' : 'text-slate-600'
                   }`}
                 >
-                  Pemilahan alokasi biaya terbesar untuk optimalisasi pengeluaran jasa pelaksanaan training dan rekrutmen SDM.
+                  Pemilahan alokasi biaya terbesar untuk optimalisasi pengeluaran dan evaluasi penyerapan per pos item beban.
                 </p>
               </div>
 
-              {/* Category Grid */}
+              {/* Item Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {categoryAnalysis.slice(0, 6).map((cat, idx) => {
                   const sharePercent = totalActual > 0 ? (cat.actual / totalActual) * 100 : 0;
@@ -846,7 +846,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                     >
                       <div className="flex items-center justify-between gap-2 mb-2">
                         <span className="text-[10px] font-black px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 font-mono">
-                          POS #{idx + 1}
+                          POS ITEM #{idx + 1}
                         </span>
                         <span className={`text-xs font-extrabold ${isDark ? 'text-purple-200' : 'text-purple-700'}`}>
                           {sharePercent.toFixed(1)}% dari Total Kas

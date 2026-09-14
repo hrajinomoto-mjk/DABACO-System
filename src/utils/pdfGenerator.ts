@@ -55,7 +55,7 @@ export interface PDFReportPayload {
   totalBudget: number;
   totalForecast: number;
   totalActual: number;
-  categories: CategoryDetail[];
+  categories?: CategoryDetail[];
   items: ItemSummary[];
   monthlyData: { month: string; budget: number; forecast: number; actual: number }[];
   darkTheme?: boolean;
@@ -253,37 +253,48 @@ export function generateExecutivePDF(payload: PDFReportPayload): void {
     }
   });
 
-  // Section 2: Category Performance Table
+  // Section 2: Item Performance Table
   // @ts-expect-error doc.lastAutoTable is added by jspdf-autotable
   const nextY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 8 : 110;
   doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(15, 23, 42);
-  doc.text('2. Cost Center & Category Utilization Performance', 15, nextY);
+  doc.text('2. Rincian Penyerapan Anggaran per Pos Item (Item Utilization & Efficiency)', 15, nextY);
 
-  const catRows = payload.categories.map(c => [
-    c.category,
-    formatIDR(c.budget),
-    formatIDR(c.forecast),
-    formatIDR(c.realization),
-    `${c.usage.toFixed(1)}%`,
-    c.remarks.length > 0 ? c.remarks.slice(0, 1).join(', ') : '-'
+  const itemRows = (payload.items && payload.items.length > 0
+    ? payload.items
+    : (payload.categories || []).map(c => ({
+        item: c.category,
+        budget: c.budget,
+        forecast: c.forecast,
+        realization: c.realization,
+        diffBF: c.diffFB,
+        diffFA: c.diffFR,
+        usage: c.usage
+      }))
+  ).map(i => [
+    i.item,
+    formatIDR(i.budget),
+    formatIDR(i.forecast),
+    formatIDR(i.realization),
+    formatIDR(i.diffFA),
+    `${i.usage.toFixed(1)}%`
   ]);
 
   autoTable(doc, {
     startY: nextY + 3,
-    head: [['Category Name', 'Budget Plan', 'Forecast', 'Realization', 'Usage (%)', 'Primary Remarks']],
-    body: catRows,
+    head: [['Nama Pos Item', 'Budget Plan', 'Forecast', 'Realisasi', 'Efisiensi (F - R)', 'Utilisasi (%)']],
+    body: itemRows,
     theme: 'grid',
     headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontSize: 8 },
     styles: { fontSize: 7.5, cellPadding: 2 },
     columnStyles: {
-      0: { fontStyle: 'bold', cellWidth: 45 },
+      0: { fontStyle: 'bold', cellWidth: 50 },
       1: { halign: 'right' },
       2: { halign: 'right' },
       3: { halign: 'right', fontStyle: 'bold' },
-      4: { halign: 'center' },
-      5: { cellWidth: 50, fontSize: 6.5 }
+      4: { halign: 'right' },
+      5: { halign: 'center' }
     }
   });
 

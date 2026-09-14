@@ -46,7 +46,6 @@ import {
   RealizationRecord,
   MasterItem,
   MasterCostCenter,
-  CategoryDetail,
   ItemSummary,
   MonthlyComparison
 } from '../types';
@@ -55,7 +54,6 @@ import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS, getRecordFY } from '../m
 import { AjinomotoLogo } from './AjinomotoLogo';
 import { DownloadConfirmModal } from './DownloadConfirmModal';
 import { motion, AnimatePresence } from 'motion/react';
-import { autoDetectCategory } from '../utils/categoryDetector';
 
 const formatCompactIDR = (val: number) => {
   if (Math.abs(val) >= 1000000000) {
@@ -212,21 +210,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const map: Record<string, string> = {};
     masterItems.forEach(mi => {
       map[mi.code] = mi.name;
-    });
-    return map;
-  }, [masterItems]);
-
-  const itemCategoryMap = useMemo(() => {
-    const map: Record<string, string> = {};
-    masterItems.forEach(mi => {
-      map[mi.code] = mi.category;
-      if (mi.name) {
-        map[mi.name] = mi.category;
-      }
-      map[mi.code.toLowerCase()] = mi.category;
-      if (mi.name) {
-        map[mi.name.toLowerCase()] = mi.category;
-      }
     });
     return map;
   }, [masterItems]);
@@ -484,48 +467,6 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     };
   }, [budget, realization, costCenters, selectedFY]);
 
-  // Category Details
-  const categoryDetails: CategoryDetail[] = useMemo(() => {
-    const catMap: Record<string, { budget: number; forecast: number; realization: number; remarks: string[] }> = {};
-
-    filteredBudget.forEach(r => {
-      const cat = itemCategoryMap[r.item] || itemCategoryMap[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
-      if (!catMap[cat]) catMap[cat] = { budget: 0, forecast: 0, realization: 0, remarks: [] };
-      catMap[cat].budget += r.amount;
-    });
-
-    filteredForecast.forEach(r => {
-      const cat = itemCategoryMap[r.item] || itemCategoryMap[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
-      if (!catMap[cat]) catMap[cat] = { budget: 0, forecast: 0, realization: 0, remarks: [] };
-      catMap[cat].forecast += r.amount;
-    });
-
-    filteredRealization.forEach(r => {
-      const cat = itemCategoryMap[r.item] || itemCategoryMap[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
-      if (!catMap[cat]) catMap[cat] = { budget: 0, forecast: 0, realization: 0, remarks: [] };
-      catMap[cat].realization += r.amount;
-      if (r.keterangan && !catMap[cat].remarks.includes(r.keterangan)) {
-        catMap[cat].remarks.push(r.keterangan);
-      }
-    });
-
-    return Object.entries(catMap).map(([category, vals]) => {
-      const diffFB = vals.budget - vals.forecast;
-      const diffFR = vals.forecast - vals.realization;
-      const usage = vals.forecast > 0 ? (vals.realization / vals.forecast) * 100 : 0;
-      return {
-        category,
-        budget: vals.budget,
-        forecast: vals.forecast,
-        realization: vals.realization,
-        diffFB,
-        diffFR,
-        usage,
-        remarks: vals.remarks
-      };
-    }).sort((a, b) => b.usage - a.usage);
-  }, [filteredBudget, filteredForecast, filteredRealization, itemCategoryMap]);
-
   // Item Summaries
   const itemSummaries: ItemSummary[] = useMemo(() => {
     const iMap: Record<string, { budget: number; forecast: number; realization: number }> = {};
@@ -561,9 +502,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     }).sort((a, b) => b.realization - a.realization);
   }, [filteredBudget, filteredForecast, filteredRealization, itemNameMap]);
 
-  // Categories over budget (>100%) or approaching (>85%)
-  const overBudgetCategories = categoryDetails.filter(c => c.usage > 100);
-  const warningCategories = categoryDetails.filter(c => c.usage > 85 && c.usage <= 100);
+  // Items over budget (>100%) or approaching (>85%)
+  const overBudgetItems = itemSummaries.filter(i => i.usage > 100);
+  const warningItems = itemSummaries.filter(i => i.usage > 85 && i.usage <= 100);
 
   // Trigger PDF Download
   const handleExportPDF = () => {
@@ -573,7 +514,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       totalBudget,
       totalForecast,
       totalActual,
-      categories: categoryDetails,
+      categories: [],
       items: itemSummaries,
       monthlyData: monthlyComparison.map(m => ({
         month: m.month,
@@ -794,7 +735,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       </motion.div>
 
       {/* Automated Threshold Warning Banner */}
-      {(overBudgetCategories.length > 0 || warningCategories.length > 0) && (
+      {(overBudgetItems.length > 0 || warningItems.length > 0) && (
         <motion.div
           initial={{ opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -815,14 +756,14 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <span className="px-2 py-0.5 rounded-full text-[10px] bg-red-600 text-white font-bold">Perlu Perhatian</span>
               </p>
               <p className="text-slate-800 dark:text-slate-200 mt-1 leading-relaxed text-xs font-medium">
-                {overBudgetCategories.length > 0 && (
+                {overBudgetItems.length > 0 && (
                   <span className="mr-2">
-                    <b className="text-red-800 dark:text-red-300 font-extrabold">{overBudgetCategories.length} Kategori Over Budget</b>: {overBudgetCategories.map(c => c.category).join(', ')}.
+                    <b className="text-red-800 dark:text-red-300 font-extrabold">{overBudgetItems.length} Pos Item Over Budget</b>: {overBudgetItems.map(i => i.item).join(', ')}.
                   </span>
                 )}
-                {warningCategories.length > 0 && (
+                {warningItems.length > 0 && (
                   <span>
-                    <b className="text-amber-800 dark:text-amber-300 font-extrabold">{warningCategories.length} Kategori Mendekati Batas (&gt;85%)</b>: {warningCategories.map(c => c.category).join(', ')}.
+                    <b className="text-amber-800 dark:text-amber-300 font-extrabold">{warningItems.length} Pos Item Mendekati Batas (&gt;85%)</b>: {warningItems.map(i => i.item).join(', ')}.
                   </span>
                 )}
               </p>
@@ -1556,213 +1497,131 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </motion.div>
       </div>
 
-      {/* Category Performance & Item Summary Tables (Richly Styled in Normal Mode with Motion Entrance) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category Detail Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.44 }}
-          className={`p-5 sm:p-6 rounded-3xl border transition-all overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-slate-900 border-slate-800 shadow-sm'
-              : 'bg-white border-2 border-slate-200/90 shadow-sm hover:shadow-md'
-          }`}
-        >
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className={`font-extrabold text-base flex items-center gap-2 ${
-                  darkMode ? 'text-white' : 'text-slate-950'
-                }`}>
-                  <span className="w-3 h-3 rounded-full bg-emerald-500 shadow-xs"></span>
-                  Performa Kategori Anggaran
-                </h3>
-                <p className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-0.5">
-                  Tingkat konsumsi budget & verifikasi rincian per kategori
-                </p>
-              </div>
-              <span className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border ${
+      {/* Pos Item Anggaran Table (Full-Width, Comprehensive View) */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.44 }}
+        className={`p-5 sm:p-6 rounded-3xl border transition-all overflow-hidden flex flex-col justify-between ${
+          darkMode
+            ? 'bg-slate-900 border-slate-800 shadow-sm'
+            : 'bg-white border-2 border-slate-200/90 shadow-sm hover:shadow-md'
+        }`}
+      >
+        <div>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h3 className={`font-extrabold text-base flex items-center gap-2 ${
+                darkMode ? 'text-white' : 'text-slate-950'
+              }`}>
+                <span className="w-3 h-3 rounded-full bg-red-600 shadow-xs"></span>
+                Rincian Performa Pos Item Anggaran
+              </h3>
+              <p className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-0.5">
+                Evaluasi penyerapan dana, deviasi anggaran (B-F), efisiensi kas (F-R), dan catatan realisasi
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`text-[11px] font-extrabold px-3 py-1.5 rounded-xl border ${
                 darkMode
                   ? 'bg-slate-800 border-slate-700 text-slate-300'
-                  : 'bg-emerald-100 border-emerald-300 text-emerald-950 shadow-xs'
+                  : 'bg-red-50 border-red-200 text-red-950 shadow-xs'
               }`}>
-                {categoryDetails.length} Kategori
+                {itemSummaries.length} Pos Item Terdaftar
               </span>
-            </div>
-
-            <div className="overflow-x-auto -mx-2 px-2 scrollbar-thin">
-              <table className="w-full text-xs text-left min-w-[520px]">
-                <thead>
-                  <tr className={`border-b text-[10px] uppercase font-black tracking-wider ${
-                    darkMode
-                      ? 'border-slate-800 text-slate-400 bg-slate-800/30'
-                      : 'border-slate-300 text-slate-900 bg-slate-100'
-                  }`}>
-                    <th className="py-3 px-2 rounded-l-lg">Kategori</th>
-                    <th className="py-3 px-2 text-right">Forecast</th>
-                    <th className="py-3 px-2 text-right">Realisasi</th>
-                    <th className="py-3 px-2 text-right">Utilisasi</th>
-                    <th className="py-3 px-2 text-center rounded-r-lg">Remarks</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                  {categoryDetails.map((cat, idx) => {
-                    const isDanger = cat.usage > 100;
-                    const isWarning = cat.usage > 85 && cat.usage <= 100;
-
-                    return (
-                      <tr
-                        key={cat.category}
-                        className={`transition-colors ${
-                          darkMode
-                            ? 'hover:bg-slate-800/50'
-                            : idx % 2 === 0
-                            ? 'bg-white hover:bg-rose-50/60'
-                            : 'bg-slate-50/70 hover:bg-rose-50/60'
-                        }`}
-                      >
-                        <td className="py-3 px-2 font-extrabold text-slate-950 dark:text-slate-100 truncate max-w-[150px]">
-                          {cat.category}
-                        </td>
-                        <td className="py-3 px-2 text-right text-slate-800 dark:text-slate-200 font-semibold">
-                          {formatIDR(cat.forecast)}
-                        </td>
-                        <td className={`py-3 px-2 text-right font-black ${
-                          darkMode ? 'text-white' : 'text-slate-950'
-                        }`}>
-                          {formatIDR(cat.realization)}
-                        </td>
-                        <td className="py-3 px-2 text-right">
-                          <span
-                            className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black shadow-xs ${
-                              isDanger
-                                ? 'bg-red-100 text-red-900 border border-red-300 dark:bg-red-950/60 dark:text-red-400 dark:border-red-800/60'
-                                : isWarning
-                                ? 'bg-amber-100 text-amber-950 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800/60'
-                                : 'bg-emerald-100 text-emerald-950 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/60'
-                            }`}
-                          >
-                            {cat.usage.toFixed(1)}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-2 text-center">
-                          <button
-                            onClick={() => setRemarksModalData({ title: cat.category, remarks: cat.remarks })}
-                            className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-                              darkMode
-                                ? 'hover:bg-slate-800 text-slate-400 hover:text-red-400'
-                                : 'bg-slate-100 hover:bg-red-100 text-slate-800 hover:text-red-700 border border-slate-300 shadow-xs'
-                            }`}
-                            title="Lihat catatan realisasi"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
             </div>
           </div>
-        </motion.div>
 
-        {/* Item Summary Table */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1], delay: 0.52 }}
-          className={`p-5 sm:p-6 rounded-3xl border transition-all overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-slate-900 border-slate-800 shadow-sm'
-              : 'bg-white border-2 border-slate-200/90 shadow-sm hover:shadow-md'
-          }`}
-        >
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h3 className={`font-extrabold text-base flex items-center gap-2 ${
-                  darkMode ? 'text-white' : 'text-slate-950'
+          <div className="overflow-x-auto -mx-2 px-2 scrollbar-thin">
+            <table className="w-full text-xs text-left min-w-[760px]">
+              <thead>
+                <tr className={`border-b text-[10px] uppercase font-black tracking-wider ${
+                  darkMode
+                    ? 'border-slate-800 text-slate-400 bg-slate-800/40'
+                    : 'border-slate-300 text-slate-900 bg-slate-100'
                 }`}>
-                  <span className="w-3 h-3 rounded-full bg-amber-500 shadow-xs"></span>
-                  Ringkasan Item Pengeluaran
-                </h3>
-                <p className="text-xs text-slate-700 dark:text-slate-300 font-medium mt-0.5">
-                  Rincian penyerapan item & catatan operasional spesifik
-                </p>
-              </div>
-              <span className={`text-[11px] font-extrabold px-2.5 py-1 rounded-lg border ${
-                darkMode
-                  ? 'bg-slate-800 border-slate-700 text-slate-300'
-                  : 'bg-amber-100 border-amber-300 text-amber-950 shadow-xs'
-              }`}>
-                {itemSummaries.length} Items
-              </span>
-            </div>
+                  <th className="py-3 px-3 rounded-l-lg">Nama Pos Item</th>
+                  <th className="py-3 px-3 text-right">Budget Plan</th>
+                  <th className="py-3 px-3 text-right">Forecast</th>
+                  <th className="py-3 px-3 text-right">Realisasi</th>
+                  <th className="py-3 px-3 text-right">Deviasi (B - F)</th>
+                  <th className="py-3 px-3 text-right">Efisiensi (F - R)</th>
+                  <th className="py-3 px-3 text-right">Utilisasi</th>
+                  <th className="py-3 px-3 text-center rounded-r-lg">Remarks</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
+                {itemSummaries.map((item, idx) => {
+                  const isDanger = item.usage > 100;
+                  const isWarning = item.usage > 85 && item.usage <= 100;
+                  const isSaving = item.diffFA >= 0;
 
-            <div className="overflow-x-auto -mx-2 px-2 scrollbar-thin">
-              <table className="w-full text-xs text-left min-w-[520px]">
-                <thead>
-                  <tr className={`border-b text-[10px] uppercase font-black tracking-wider ${
-                    darkMode
-                      ? 'border-slate-800 text-slate-400 bg-slate-800/30'
-                      : 'border-slate-300 text-slate-900 bg-slate-100'
-                  }`}>
-                    <th className="py-3 px-2 rounded-l-lg">Nama Item</th>
-                    <th className="py-3 px-2 text-right">Budget</th>
-                    <th className="py-3 px-2 text-right">Forecast</th>
-                    <th className="py-3 px-2 text-right">Realisasi</th>
-                    <th className="py-3 px-2 text-center rounded-r-lg">Detail</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-800/60">
-                  {itemSummaries.slice(0, 7).map((item, idx) => (
+                  return (
                     <tr
                       key={item.item}
                       className={`transition-colors ${
                         darkMode
                           ? 'hover:bg-slate-800/50'
                           : idx % 2 === 0
-                          ? 'bg-white hover:bg-blue-50/60'
-                          : 'bg-slate-50/70 hover:bg-blue-50/60'
+                          ? 'bg-white hover:bg-red-50/50'
+                          : 'bg-slate-50/70 hover:bg-red-50/50'
                       }`}
                     >
-                      <td className="py-3 px-2 font-extrabold text-slate-950 dark:text-slate-100 truncate max-w-[160px]">
-                        {item.item}
+                      <td className="py-3.5 px-3 font-extrabold text-slate-950 dark:text-slate-100">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${isDanger ? 'bg-red-500 shadow-xs' : isWarning ? 'bg-amber-500 shadow-xs' : 'bg-emerald-500 shadow-xs'}`} />
+                          <span className="truncate max-w-[240px]" title={item.item}>{item.item}</span>
+                        </div>
                       </td>
-                      <td className="py-3 px-2 text-right text-slate-800 dark:text-slate-200 font-semibold">
+                      <td className="py-3.5 px-3 text-right text-slate-800 dark:text-slate-200 font-semibold">
                         {formatIDR(item.budget)}
                       </td>
-                      <td className="py-3 px-2 text-right text-slate-800 dark:text-slate-200 font-semibold">
+                      <td className="py-3.5 px-3 text-right text-slate-800 dark:text-slate-200 font-semibold">
                         {formatIDR(item.forecast)}
                       </td>
-                      <td className={`py-3 px-2 text-right font-black ${
-                        darkMode ? 'text-white' : 'text-slate-950'
-                      }`}>
+                      <td className={`py-3.5 px-3 text-right font-black ${darkMode ? 'text-white' : 'text-slate-950'}`}>
                         {formatIDR(item.realization)}
                       </td>
-                      <td className="py-3 px-2 text-center">
+                      <td className="py-3.5 px-3 text-right font-mono text-slate-700 dark:text-slate-300">
+                        {formatIDR(item.diffBF)}
+                      </td>
+                      <td className={`py-3.5 px-3 text-right font-bold ${isSaving ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
+                        {isSaving ? `+${formatIDR(item.diffFA)}` : formatIDR(item.diffFA)}
+                      </td>
+                      <td className="py-3.5 px-3 text-right">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-full text-[11px] font-black shadow-xs ${
+                            isDanger
+                              ? 'bg-red-100 text-red-900 border border-red-300 dark:bg-red-950/60 dark:text-red-400 dark:border-red-800/60'
+                              : isWarning
+                              ? 'bg-amber-100 text-amber-950 border border-amber-300 dark:bg-amber-950/60 dark:text-amber-400 dark:border-amber-800/60'
+                              : 'bg-emerald-100 text-emerald-950 border border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/60'
+                          }`}
+                        >
+                          {item.usage.toFixed(1)}%
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-3 text-center">
                         <button
                           onClick={() => setRemarksModalData({ title: item.item, remarks: getItemRemarks(item.item) })}
                           className={`p-1.5 rounded-xl transition-all cursor-pointer ${
                             darkMode
-                              ? 'hover:bg-slate-800 text-slate-400 hover:text-blue-400'
-                              : 'bg-slate-100 hover:bg-blue-100 text-slate-800 hover:text-blue-700 border border-slate-300 shadow-xs'
+                              ? 'hover:bg-slate-800 text-slate-400 hover:text-red-400'
+                              : 'bg-slate-100 hover:bg-red-100 text-slate-800 hover:text-red-700 border border-slate-300 shadow-xs'
                           }`}
-                          title="Lihat detail remarks item"
+                          title="Lihat catatan keterangan item"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
-        </motion.div>
-      </div>
+        </div>
+      </motion.div>
 
       {/* Remarks Popup Modal */}
       {remarksModalData && (
@@ -1791,7 +1650,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <div className="p-6 max-h-[60vh] overflow-y-auto space-y-3">
               {remarksModalData.remarks.length === 0 ? (
                 <div className="text-center py-8 text-slate-400 text-xs italic">
-                  Belum ada catatan remarks untuk kategori/item ini.
+                  Belum ada catatan remarks untuk pos item ini.
                 </div>
               ) : (
                 remarksModalData.remarks.map((remark, idx) => (
@@ -1891,7 +1750,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                     <Sparkles className="w-3.5 h-3.5 text-amber-400" /> Ringkasan Budget & Realisasi Finansial
                   </span>
                   <span className="text-[10px] text-slate-500 font-mono">
-                    {categoryDetails.length} Kategori &bull; {itemSummaries.length} Pos Item
+                    {itemSummaries.length} Pos Item Anggaran
                   </span>
                 </div>
 
@@ -2079,11 +1938,11 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                       <span className="text-xs">Halaman 2</span>
                       <span className="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 font-mono">VARIANCE DETAIL</span>
                     </div>
-                    <p className="font-bold text-xs text-slate-200">Analisis Kategori & Pos Beban</p>
+                    <p className="font-bold text-xs text-slate-200">Analisis Pos Item Beban</p>
                     <ul className="mt-2 space-y-1 text-[11px] text-slate-400">
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />
-                        <span>Tabel Lengkap Per Pos Kategori</span>
+                        <span>Tabel Lengkap Per Pos Item Anggaran</span>
                       </li>
                       <li className="flex items-center gap-1.5">
                         <CheckCircle2 className="w-3 h-3 text-emerald-400 shrink-0" />

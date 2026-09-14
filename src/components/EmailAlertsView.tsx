@@ -6,7 +6,7 @@ import { formatIDR } from '../utils/pdfGenerator';
 interface EmailAlertsViewProps {
   emailSetting: EmailSetting;
   onUpdateEmailSetting: (newSetting: Partial<EmailSetting>) => void;
-  categories: CategoryDetail[];
+  categories?: CategoryDetail[];
   items: ItemSummary[];
   alerts: AlertNotification[];
   onTriggerEmailAlert: (recipient: string, subject: string, bodyHtml: string) => void;
@@ -16,7 +16,7 @@ interface EmailAlertsViewProps {
 export const EmailAlertsView: React.FC<EmailAlertsViewProps> = ({
   emailSetting,
   onUpdateEmailSetting,
-  categories,
+  categories = [],
   items,
   alerts,
   onTriggerEmailAlert,
@@ -31,9 +31,9 @@ export const EmailAlertsView: React.FC<EmailAlertsViewProps> = ({
   const [isSending, setIsSending] = useState(false);
   const [sendSuccess, setSendSuccess] = useState(false);
 
-  // Active alerts calculated from category usage
-  const overBudgetCats = categories.filter(c => c.usage > dangerThreshold);
-  const warningCats = categories.filter(c => c.usage > warningThreshold && c.usage <= dangerThreshold);
+  // Active alerts calculated from item usage
+  const overBudgetItems = items.filter(i => i.usage > dangerThreshold);
+  const warningItems = items.filter(i => i.usage > warningThreshold && i.usage <= dangerThreshold);
 
   const handleAddRecipient = (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,12 +108,12 @@ export const EmailAlertsView: React.FC<EmailAlertsViewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm">
           <div className="flex items-center justify-between text-xs text-slate-400 mb-1">
-            <span>Kategori Over Budget (&gt;{dangerThreshold}%)</span>
+            <span>Pos Item Over Budget (&gt;{dangerThreshold}%)</span>
             <ShieldAlert className="w-4 h-4 text-red-500" />
           </div>
-          <p className="text-2xl font-extrabold text-red-500">{overBudgetCats.length}</p>
+          <p className="text-2xl font-extrabold text-red-500">{overBudgetItems.length}</p>
           <p className="text-[11px] text-slate-400 mt-1">
-            {overBudgetCats.length > 0 ? overBudgetCats.map(c => c.category).join(', ') : 'Semua kategori terkendali'}
+            {overBudgetItems.length > 0 ? overBudgetItems.map(i => i.item).join(', ') : 'Semua pos item terkendali'}
           </p>
         </div>
 
@@ -122,9 +122,9 @@ export const EmailAlertsView: React.FC<EmailAlertsViewProps> = ({
             <span>Mendekati Limit (&gt;{warningThreshold}%)</span>
             <AlertTriangle className="w-4 h-4 text-amber-500" />
           </div>
-          <p className="text-2xl font-extrabold text-amber-500">{warningCats.length}</p>
+          <p className="text-2xl font-extrabold text-amber-500">{warningItems.length}</p>
           <p className="text-[11px] text-slate-400 mt-1">
-            {warningCats.length > 0 ? warningCats.map(c => c.category).join(', ') : 'Tidak ada kategori berisiko'}
+            {warningItems.length > 0 ? warningItems.map(i => i.item).join(', ') : 'Tidak ada item berisiko'}
           </p>
         </div>
 
@@ -268,9 +268,9 @@ export const EmailAlertsView: React.FC<EmailAlertsViewProps> = ({
                 </div>
               </div>
               <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold text-white ${
-                overBudgetCats.length > 0 ? 'bg-rose-600' : 'bg-emerald-600'
+                overBudgetItems.length > 0 ? 'bg-rose-600' : 'bg-emerald-600'
               }`}>
-                {overBudgetCats.length > 0 ? 'OVER BUDGET' : 'ON TRACK'}
+                {overBudgetItems.length > 0 ? 'OVER BUDGET' : 'ON TRACK'}
               </span>
             </div>
 

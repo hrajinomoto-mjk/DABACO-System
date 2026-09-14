@@ -218,29 +218,24 @@ export const LookerStudioView: React.FC<LookerStudioViewProps> = ({
       .sort((a, b) => b.budget - a.budget);
   }, [costCenters, filteredBudget, filteredForecast, filteredRealization]);
 
-  // Category Distribution (Pie Chart)
-  const categoryDistribution = useMemo(() => {
-    const itemToCat: Record<string, string> = {};
-    masterItems.forEach(i => {
-      itemToCat[i.code] = i.category;
-    });
-
-    const catMap: Record<string, number> = {};
+  // Item Distribution (Pie / Donut Chart)
+  const itemDistribution = useMemo(() => {
+    const itemMap: Record<string, number> = {};
     filteredRealization.forEach(r => {
-      const cat = itemToCat[r.item] || 'General Ops & Facilities';
-      catMap[cat] = (catMap[cat] || 0) + r.amount;
+      const itemName = r.item || 'Biaya Operasional Lainnya';
+      itemMap[itemName] = (itemMap[itemName] || 0) + r.amount;
     });
 
-    const total = Object.values(catMap).reduce((s, v) => s + v, 0);
+    const total = Object.values(itemMap).reduce((s, v) => s + v, 0);
 
-    return Object.entries(catMap)
+    return Object.entries(itemMap)
       .map(([name, value]) => ({
         name,
         value,
         percentage: total > 0 ? (value / total) * 100 : 0
       }))
       .sort((a, b) => b.value - a.value);
-  }, [masterItems, filteredRealization]);
+  }, [filteredRealization]);
 
   return (
     <div className={`space-y-5 pb-12 w-full max-w-[1920px] mx-auto transition-all ${isFullscreen ? 'fixed inset-0 z-50 p-4 sm:p-6 bg-[#090d16] overflow-y-auto' : ''}`}>
@@ -539,17 +534,17 @@ export const LookerStudioView: React.FC<LookerStudioViewProps> = ({
           </div>
         </div>
 
-        {/* Right 1 Col: Spending Category Share (Donut Chart) */}
+        {/* Right 1 Col: Spending Item Share (Donut Chart) */}
         <div className={`p-5 rounded-3xl border shadow-sm flex flex-col justify-between ${
           darkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'
         }`}>
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
               <PieChartIcon className="w-4 h-4 text-emerald-500" />
-              Pangsa Kategori Pengeluaran
+              Pangsa Pos Item Beban
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Distribusi penyerapan kas aktual berdasarkan kategori operasional
+              Distribusi penyerapan kas aktual berdasarkan pos item pengeluaran
             </p>
           </div>
 
@@ -557,7 +552,7 @@ export const LookerStudioView: React.FC<LookerStudioViewProps> = ({
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={categoryDistribution}
+                  data={itemDistribution}
                   cx="50%"
                   cy="50%"
                   innerRadius={50}
@@ -565,7 +560,7 @@ export const LookerStudioView: React.FC<LookerStudioViewProps> = ({
                   paddingAngle={4}
                   dataKey="value"
                 >
-                  {categoryDistribution.map((entry, index) => (
+                  {itemDistribution.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                   ))}
                 </Pie>
@@ -591,18 +586,18 @@ export const LookerStudioView: React.FC<LookerStudioViewProps> = ({
           </div>
 
           {/* Legend List */}
-          <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800 max-h-[120px] overflow-y-auto text-xs">
-            {categoryDistribution.map((cat, idx) => (
-              <div key={cat.name} className="flex items-center justify-between text-[11px]">
+          <div className="space-y-1.5 pt-2 border-t border-slate-200 dark:border-slate-800 max-h-[120px] overflow-y-auto text-xs scrollbar-thin">
+            {itemDistribution.map((item, idx) => (
+              <div key={item.name} className="flex items-center justify-between text-[11px]">
                 <span className="flex items-center gap-1.5 truncate text-slate-700 dark:text-slate-300">
                   <span
                     className="w-2 h-2 rounded-full shrink-0"
                     style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }}
                   />
-                  <span className="truncate">{cat.name}</span>
+                  <span className="truncate" title={item.name}>{item.name}</span>
                 </span>
                 <span className="font-bold text-slate-900 dark:text-white shrink-0 ml-2">
-                  {cat.percentage.toFixed(1)}%
+                  {item.percentage.toFixed(1)}%
                 </span>
               </div>
             ))}
