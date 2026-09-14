@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Plus, Search, Edit2, Trash2, FileSpreadsheet, X, Check, Filter, Upload, Database, Download, RefreshCw, ShieldCheck, CheckCircle2, UploadCloud } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, FileSpreadsheet, X, Check, Filter, Upload, Database, Download, RefreshCw, ShieldCheck, CheckCircle2, UploadCloud, Sliders } from 'lucide-react';
 import { BudgetRecord, ForecastRecord, RealizationRecord, MasterCostCenter, MasterItem } from '../types';
 import { formatIDR } from '../utils/pdfGenerator';
 import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS, getRecordFY } from '../mockData';
@@ -18,21 +18,22 @@ interface DataManagementViewProps {
   onAddBudget: (record: Omit<BudgetRecord, 'id'>) => void;
   onEditBudget: (id: string, record: Partial<BudgetRecord>) => void;
   onDeleteBudget: (id: string) => void;
-  onBatchAddBudget: (records: Omit<BudgetRecord, 'id'>[]) => void;
+  onBatchAddBudget: (records: Omit<BudgetRecord, 'id'>[], mode?: 'append' | 'overwrite') => void;
   onAddForecast: (record: Omit<ForecastRecord, 'id'>) => void;
   onEditForecast: (id: string, record: Partial<ForecastRecord>) => void;
   onDeleteForecast: (id: string) => void;
-  onBatchAddForecast: (records: Omit<ForecastRecord, 'id'>[]) => void;
+  onBatchAddForecast: (records: Omit<ForecastRecord, 'id'>[], mode?: 'append' | 'overwrite') => void;
   onAddRealization: (record: Omit<RealizationRecord, 'id'>) => void;
   onEditRealization: (id: string, record: Partial<RealizationRecord>) => void;
   onDeleteRealization: (id: string) => void;
-  onBatchAddRealization: (records: Omit<RealizationRecord, 'id'>[]) => void;
+  onBatchAddRealization: (records: Omit<RealizationRecord, 'id'>[], mode?: 'append' | 'overwrite') => void;
   onResetDatabase?: () => void;
   onExportBackup?: () => void;
   onPushToSupabase?: () => void;
   isPushingSupabase?: boolean;
   onReloadFromSupabase?: () => void;
   isLoadingFromSupabase?: boolean;
+  onOpenDatabaseConsole?: () => void;
   dbSyncStatus?: 'connected' | 'empty' | 'unconfigured' | 'error';
   lastSyncTime?: string | null;
   darkMode: boolean;
@@ -63,6 +64,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   isPushingSupabase = false,
   onReloadFromSupabase,
   isLoadingFromSupabase = false,
+  onOpenDatabaseConsole,
   dbSyncStatus = 'connected',
   lastSyncTime = null,
   darkMode
@@ -287,6 +289,18 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           </div>
 
           <div className="flex flex-wrap items-center gap-2 self-start lg:self-center shrink-0">
+            {onOpenDatabaseConsole && (
+              <button
+                type="button"
+                onClick={onOpenDatabaseConsole}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-red-500/40 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-sm transition cursor-pointer"
+                title="Buka konsol manajemen database: opsi menimpa, menambahkan, cadangan, dan pemulihan"
+              >
+                <Sliders className="w-3.5 h-3.5" />
+                <span>Konsol Database & Sinkronisasi</span>
+              </button>
+            )}
+
             {onPushToSupabase && (
               <button
                 type="button"

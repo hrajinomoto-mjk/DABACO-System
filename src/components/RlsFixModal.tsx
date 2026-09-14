@@ -19,6 +19,7 @@ interface RlsFixModalProps {
   onClose: () => void;
   onRetryPush?: () => void;
   projectUrl?: string;
+  errorMessage?: string;
   darkMode?: boolean;
 }
 
@@ -27,6 +28,7 @@ export const RlsFixModal: React.FC<RlsFixModalProps> = ({
   onClose,
   onRetryPush,
   projectUrl = '',
+  errorMessage,
   darkMode = false
 }) => {
   const [activeTab, setActiveTab] = useState<'rls' | 'all'>('rls');
@@ -111,6 +113,12 @@ export const RlsFixModal: React.FC<RlsFixModalProps> = ({
             <p className="mt-3 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
               Penyebab: Tabel <code className="bg-rose-500/15 text-rose-700 dark:text-rose-300 px-1.5 py-0.5 rounded font-mono font-semibold">master_cost_center</code> di Supabase mengaktifkan <strong>Row-Level Security (RLS)</strong>, namun belum memiliki kebijakan (Policy) yang membolehkan role aplikasi untuk menyimpan data.
             </p>
+
+            {errorMessage && (
+              <div className="mt-2.5 text-[11px] font-mono text-rose-800 dark:text-rose-300 bg-rose-500/10 px-2.5 py-1.5 rounded-lg border border-rose-500/20 break-all">
+                Pesan Galat Supabase: {errorMessage}
+              </div>
+            )}
           </div>
 
           {/* Quick Steps Guide */}

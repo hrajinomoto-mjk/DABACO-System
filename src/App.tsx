@@ -21,6 +21,7 @@ import { LogoutConfirmModal } from './components/LogoutConfirmModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { AltKeyGuideHUD } from './components/AltKeyGuideHUD';
 import { RlsFixModal } from './components/RlsFixModal';
+import { DatabaseConsoleModal } from './components/DatabaseConsoleModal';
 
 import {
   INITIAL_BUDGET,
@@ -244,6 +245,7 @@ export default function App() {
         const errorMsg = res.error || 'Gagal mengunggah data ke Supabase.';
         showToast(errorMsg, 'error');
         if (res.isRlsError || errorMsg.toLowerCase().includes('row-level security')) {
+          setRlsErrorMessage(errorMsg);
           setShowRlsFixModal(true);
         }
       }
@@ -252,6 +254,7 @@ export default function App() {
       const errMsg = err?.message || 'Terjadi kesalahan saat push data ke database.';
       showToast(errMsg, 'error');
       if (errMsg.toLowerCase().includes('row-level security')) {
+        setRlsErrorMessage(errMsg);
         setShowRlsFixModal(true);
       }
     } finally {
@@ -347,6 +350,8 @@ export default function App() {
   const [isAltPressed, setIsAltPressed] = useState<boolean>(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState<boolean>(false);
   const [showRlsFixModal, setShowRlsFixModal] = useState<boolean>(false);
+  const [showDatabaseConsoleModal, setShowDatabaseConsoleModal] = useState<boolean>(false);
+  const [rlsErrorMessage, setRlsErrorMessage] = useState<string | undefined>(undefined);
 
   // Active Alerts
   const [alerts, setAlerts] = useState<AlertNotification[]>([
@@ -408,14 +413,19 @@ export default function App() {
     showToast('Data Budget Plan berhasil dihapus.');
   };
 
-  const handleBatchAddBudget = (records: Omit<BudgetRecord, 'id'>[]) => {
+  const handleBatchAddBudget = (records: Omit<BudgetRecord, 'id'>[], mode: 'append' | 'overwrite' = 'append') => {
     const timestamp = Date.now();
     const newRecords: BudgetRecord[] = records.map((r, idx) => ({
       ...r,
       id: `b-bulk-${timestamp}-${idx}`
     }));
-    setBudget(prev => [...newRecords, ...prev]);
-    showToast(`Berhasil mengimpor batch ${records.length} data Budget Plan!`);
+    if (mode === 'overwrite') {
+      setBudget(newRecords);
+      showToast(`Berhasil menimpa seluruh data Budget Plan dengan ${records.length} baris baru!`);
+    } else {
+      setBudget(prev => [...newRecords, ...prev]);
+      showToast(`Berhasil menambahkan ${records.length} data Budget Plan baru!`);
+    }
   };
 
   // CRUD for Forecast
@@ -438,14 +448,19 @@ export default function App() {
     showToast('Data Forecast berhasil dihapus.');
   };
 
-  const handleBatchAddForecast = (records: Omit<ForecastRecord, 'id'>[]) => {
+  const handleBatchAddForecast = (records: Omit<ForecastRecord, 'id'>[], mode: 'append' | 'overwrite' = 'append') => {
     const timestamp = Date.now();
     const newRecords: ForecastRecord[] = records.map((r, idx) => ({
       ...r,
       id: `f-bulk-${timestamp}-${idx}`
     }));
-    setForecast(prev => [...newRecords, ...prev]);
-    showToast(`Berhasil mengimpor batch ${records.length} data Forecast!`);
+    if (mode === 'overwrite') {
+      setForecast(newRecords);
+      showToast(`Berhasil menimpa seluruh data Forecast dengan ${records.length} baris baru!`);
+    } else {
+      setForecast(prev => [...newRecords, ...prev]);
+      showToast(`Berhasil menambahkan ${records.length} data Forecast baru!`);
+    }
   };
 
   // CRUD for Realization
@@ -485,14 +500,86 @@ export default function App() {
     showToast('Data Realisasi Aktual berhasil dihapus.');
   };
 
-  const handleBatchAddRealization = (records: Omit<RealizationRecord, 'id'>[]) => {
+  const handleBatchAddRealization = (records: Omit<RealizationRecord, 'id'>[], mode: 'append' | 'overwrite' = 'append') => {
     const timestamp = Date.now();
     const newRecords: RealizationRecord[] = records.map((r, idx) => ({
       ...r,
       id: `r-bulk-${timestamp}-${idx}`
     }));
-    setRealization(prev => [...newRecords, ...prev]);
-    showToast(`Berhasil mengimpor batch ${records.length} data Realisasi Aktual!`);
+    if (mode === 'overwrite') {
+      setRealization(newRecords);
+      showToast(`Berhasil menimpa seluruh data Realisasi dengan ${records.length} baris baru!`);
+    } else {
+      setRealization(prev => [...newRecords, ...prev]);
+      showToast(`Berhasil menambahkan ${records.length} data Realisasi baru!`);
+    }
+  };
+
+  // Local Database Overwrite and Merge Handlers for Database Management Console
+  const handleOverwriteLocalDatabase = (data: {
+    budget?: BudgetRecord[];
+    forecast?: ForecastRecord[];
+    realization?: RealizationRecord[];
+    costCenters?: MasterCostCenter[];
+    masterItems?: MasterItem[];
+  }) => {
+    if (data.budget) setBudget(data.budget);
+    if (data.forecast) setForecast(data.forecast);
+    if (data.realization) setRealization(data.realization);
+    if (data.costCenters) setCostCenters(data.costCenters);
+    if (data.masterItems) setMasterItems(data.masterItems);
+  };
+
+  const handleMergeLocalDatabase = (data: {
+    budget?: BudgetRecord[];
+    forecast?: ForecastRecord[];
+    realization?: RealizationRecord[];
+    costCenters?: MasterCostCenter[];
+    masterItems?: MasterItem[];
+  }) => {
+    if (data.budget && data.budget.length > 0) {
+      setBudget(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newItems = data.budget!.filter(b => !existingIds.has(b.id));
+        return [...prev, ...newItems];
+      });
+    }
+    if (data.forecast && data.forecast.length > 0) {
+      setForecast(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newItems = data.forecast!.filter(f => !existingIds.has(f.id));
+        return [...prev, ...newItems];
+      });
+    }
+    if (data.realization && data.realization.length > 0) {
+      setRealization(prev => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const newItems = data.realization!.filter(r => !existingIds.has(r.id));
+        return [...prev, ...newItems];
+      });
+    }
+    if (data.costCenters && data.costCenters.length > 0) {
+      setCostCenters(prev => {
+        const existingCodes = new Set(prev.map(c => c.code));
+        const newItems = data.costCenters!.filter(c => !existingCodes.has(c.code));
+        return [...prev, ...newItems];
+      });
+    }
+    if (data.masterItems && data.masterItems.length > 0) {
+      setMasterItems(prev => {
+        const existingCodes = new Set(prev.map(i => i.code));
+        const newItems = data.masterItems!.filter(i => !existingCodes.has(i.code));
+        return [...prev, ...newItems];
+      });
+    }
+  };
+
+  const handleResetFactoryData = () => {
+    setBudget(INITIAL_BUDGET);
+    setForecast(INITIAL_FORECAST);
+    setRealization(INITIAL_REALIZATION);
+    setCostCenters(INITIAL_COST_CENTERS);
+    setMasterItems(INITIAL_MASTER_ITEMS);
   };
 
   // Trigger Two-Way Google Sheets Sync
@@ -846,6 +933,7 @@ export default function App() {
                   isPushingSupabase={isPushingToSupabase}
                   onReloadFromSupabase={() => handleLoadFromSupabase(supabaseConfig, false)}
                   isLoadingFromSupabase={isDbLoading}
+                  onOpenDatabaseConsole={() => setShowDatabaseConsoleModal(true)}
                   dbSyncStatus={dbSyncStatus}
                   lastSyncTime={dbLastSyncTime}
                   darkMode={darkMode}
@@ -929,6 +1017,7 @@ export default function App() {
                   pushProgress={pushProgressMessage}
                   onReloadData={(c) => handleLoadFromSupabase({ ...supabaseConfig, ...c }, false)}
                   isLoadingData={isDbLoading}
+                  onOpenDatabaseConsole={() => setShowDatabaseConsoleModal(true)}
                   dbSyncStatus={dbSyncStatus}
                   lastSyncTime={dbLastSyncTime}
                 />
@@ -1012,6 +1101,28 @@ export default function App() {
         onClose={() => setShowRlsFixModal(false)}
         onRetryPush={() => handlePushDataToSupabase()}
         projectUrl={supabaseConfig.projectUrl}
+        errorMessage={rlsErrorMessage}
+        darkMode={darkMode}
+      />
+
+      {/* Full-featured Database Management Console Modal (Menimpa, Menambahkan, Cadangan, Reset) */}
+      <DatabaseConsoleModal
+        isOpen={showDatabaseConsoleModal}
+        onClose={() => setShowDatabaseConsoleModal(false)}
+        supabaseConfig={supabaseConfig}
+        budget={budget}
+        forecast={forecast}
+        realization={realization}
+        costCenters={costCenters}
+        masterItems={masterItems}
+        onOverwriteLocalDatabase={handleOverwriteLocalDatabase}
+        onMergeLocalDatabase={handleMergeLocalDatabase}
+        onResetFactoryData={handleResetFactoryData}
+        onOpenRlsFixModal={(err) => {
+          setRlsErrorMessage(err);
+          setShowRlsFixModal(true);
+        }}
+        showToast={showToast}
         darkMode={darkMode}
       />
     </div>

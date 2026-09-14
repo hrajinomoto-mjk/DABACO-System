@@ -330,10 +330,22 @@ export async function fetchDatabaseFromSupabase(config: SupabaseConfig): Promise
   }
 }
 
+export interface PushOptions {
+  mode?: 'append' | 'overwrite'; // 'append' = upsert/add without deleting; 'overwrite' = clean tables first
+  tables?: {
+    costCenters?: boolean;
+    masterItems?: boolean;
+    budget?: boolean;
+    forecast?: boolean;
+    realization?: boolean;
+  };
+}
+
 export interface PushResult {
   success: boolean;
   error?: string;
   isRlsError?: boolean;
+  modeUsed?: 'append' | 'overwrite';
   counts?: {
     costCenters: number;
     masterItems: number;
@@ -341,6 +353,129 @@ export interface PushResult {
     forecast: number;
     realization: number;
   };
+}
+
+export interface SupabaseTableCounts {
+  costCenters: number;
+  masterItems: number;
+  budget: number;
+  forecast: number;
+  realization: number;
+}
+
+export async function fetchDatabaseCountsFromSupabase(
+  config: SupabaseConfig
+): Promise<{ success: boolean; counts?: SupabaseTableCounts; error?: string }> {
+  const client = getSupabaseClient(config);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+
+  try {
+    const [ccRes, itRes, bRes, fRes, rRes] = await Promise.all([
+      client.from('master_cost_center').select('*', { count: 'exact', head: true }),
+      client.from('master_items').select('*', { count: 'exact', head: true }),
+      client.from('budget_plan').select('*', { count: 'exact', head: true }),
+      client.from('forecast').select('*', { count: 'exact', head: true }),
+      client.from('realization').select('*', { count: 'exact', head: true })
+    ]);
+
+    return {
+      success: true,
+      counts: {
+        costCenters: ccRes.count ?? 0,
+        masterItems: itRes.count ?? 0,
+        budget: bRes.count ?? 0,
+        forecast: fRes.count ?? 0,
+        realization: rRes.count ?? 0
+      }
+    };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Gagal mengambil jumlah data dari Supabase.'
+    };
+  }
+}
+
+export async function clearDatabaseTablesInSupabase(
+  config: SupabaseConfig,
+  tables: {
+    realization?: boolean;
+    forecast?: boolean;
+    budget?: boolean;
+    masterItems?: boolean;
+    costCenters?: boolean;
+  },
+  onProgress?: (step: string) => void
+): Promise<{ success: boolean; error?: string; cleared: string[] }> {
+  const client = getSupabaseClient(config);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.', cleared: [] };
+  }
+
+  const cleared: string[] = [];
+  try {
+    // Foreign key safety: delete transactions first, then master tables
+    if (tables.realization) {
+      onProgress?.('Mengosongkan tabel Realization...');
+      const { error } = await client
+        .from('realization')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw new Error(`Gagal mengosongkan realization: ${error.message}`);
+      cleared.push('Realization');
+    }
+
+    if (tables.forecast) {
+      onProgress?.('Mengosongkan tabel Forecast...');
+      const { error } = await client
+        .from('forecast')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw new Error(`Gagal mengosongkan forecast: ${error.message}`);
+      cleared.push('Forecast');
+    }
+
+    if (tables.budget) {
+      onProgress?.('Mengosongkan tabel Budget Plan...');
+      const { error } = await client
+        .from('budget_plan')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+      if (error) throw new Error(`Gagal mengosongkan budget_plan: ${error.message}`);
+      cleared.push('Budget Plan');
+    }
+
+    if (tables.masterItems) {
+      onProgress?.('Mengosongkan tabel Master Items...');
+      const { error } = await client
+        .from('master_items')
+        .delete()
+        .neq('code', '__NON_EXISTING_CODE__');
+      if (error) throw new Error(`Gagal mengosongkan master_items: ${error.message}`);
+      cleared.push('Master Items');
+    }
+
+    if (tables.costCenters) {
+      onProgress?.('Mengosongkan tabel Master Cost Center...');
+      const { error } = await client
+        .from('master_cost_center')
+        .delete()
+        .neq('code', '__NON_EXISTING_CODE__');
+      if (error) throw new Error(`Gagal mengosongkan master_cost_center: ${error.message}`);
+      cleared.push('Master Cost Center');
+    }
+
+    onProgress?.('Tabel berhasil dikosongkan!');
+    return { success: true, cleared };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: err?.message || 'Gagal mengosongkan tabel di Supabase.',
+      cleared
+    };
+  }
 }
 
 export async function pushDatabaseToSupabase(
@@ -352,7 +487,8 @@ export async function pushDatabaseToSupabase(
     realization: RealizationRecord[];
   },
   config: SupabaseConfig,
-  onProgress?: (step: string) => void
+  onProgress?: (step: string) => void,
+  options?: PushOptions
 ): Promise<PushResult> {
   const client = getSupabaseClient(config);
   if (!client) {
@@ -529,13 +665,13 @@ export async function pushDatabaseToSupabase(
       resolveSafeItem(r.item);
     });
 
-    // Upload cost centers
-    const costCenterRows = Array.from(resolvedCostCenterMap.values()).map(cc => ({
-      code: cc.code.slice(0, 32),
-      name: cc.name.slice(0, 128),
-      department: cc.department.slice(0, 64),
-      head_of_dept: cc.headOfDept ? cc.headOfDept.slice(0, 128) : null
-    }));
+    const selectedTables = {
+      costCenters: options?.tables?.costCenters !== false,
+      masterItems: options?.tables?.masterItems !== false,
+      budget: options?.tables?.budget !== false,
+      forecast: options?.tables?.forecast !== false,
+      realization: options?.tables?.realization !== false
+    };
 
     const wrapTableError = (table: string, err: any): Error => {
       const rawMsg = err?.message || String(err);
@@ -545,7 +681,56 @@ export async function pushDatabaseToSupabase(
       return new Error(`Gagal push ${table}: ${rawMsg}`);
     };
 
-    if (costCenterRows.length > 0) {
+    // If Overwrite mode is chosen: delete existing records from chosen tables first (in reverse dependency order)
+    if (options?.mode === 'overwrite') {
+      onProgress?.('Membersihkan data lama di Supabase (Mode Menimpa)...');
+      if (selectedTables.realization) {
+        const { error } = await client
+          .from('realization')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) throw wrapTableError('realization (delete)', error);
+      }
+      if (selectedTables.forecast) {
+        const { error } = await client
+          .from('forecast')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) throw wrapTableError('forecast (delete)', error);
+      }
+      if (selectedTables.budget) {
+        const { error } = await client
+          .from('budget_plan')
+          .delete()
+          .neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) throw wrapTableError('budget_plan (delete)', error);
+      }
+      if (selectedTables.masterItems) {
+        const { error } = await client
+          .from('master_items')
+          .delete()
+          .neq('code', '__NON_EXISTING_CODE__');
+        if (error) throw wrapTableError('master_items (delete)', error);
+      }
+      if (selectedTables.costCenters) {
+        const { error } = await client
+          .from('master_cost_center')
+          .delete()
+          .neq('code', '__NON_EXISTING_CODE__');
+        if (error) throw wrapTableError('master_cost_center (delete)', error);
+      }
+    }
+
+    // Upload cost centers
+    const costCenterRows = Array.from(resolvedCostCenterMap.values()).map(cc => ({
+      code: cc.code.slice(0, 32),
+      name: cc.name.slice(0, 128),
+      department: cc.department.slice(0, 64),
+      head_of_dept: cc.headOfDept ? cc.headOfDept.slice(0, 128) : null
+    }));
+
+    if (selectedTables.costCenters && costCenterRows.length > 0) {
+      onProgress?.('Mengunggah Master Cost Center...');
       const { error: ccErr } = await client
         .from('master_cost_center')
         .upsert(costCenterRows, { onConflict: 'code' });
@@ -560,7 +745,8 @@ export async function pushDatabaseToSupabase(
       status: it.status || 'Active'
     }));
 
-    if (itemRows.length > 0) {
+    if (selectedTables.masterItems && itemRows.length > 0) {
+      onProgress?.('Mengunggah Master Items & Biaya...');
       const { error: itErr } = await client
         .from('master_items')
         .upsert(itemRows, { onConflict: 'code' });
@@ -568,7 +754,6 @@ export async function pushDatabaseToSupabase(
     }
 
     // 3. Push Budget Plan
-    onProgress?.('Mengunggah data Rencana Anggaran (Budget Plan)...');
     const budgetRows = data.budget.map(b => ({
       id: ensureUUID(b.id),
       year: Number(b.year) || 2026,
@@ -578,7 +763,8 @@ export async function pushDatabaseToSupabase(
       amount: Number(b.amount) || 0
     }));
 
-    if (budgetRows.length > 0) {
+    if (selectedTables.budget && budgetRows.length > 0) {
+      onProgress?.('Mengunggah data Rencana Anggaran (Budget Plan)...');
       const { error: bErr } = await client
         .from('budget_plan')
         .upsert(budgetRows, { onConflict: 'id' });
@@ -586,7 +772,6 @@ export async function pushDatabaseToSupabase(
     }
 
     // 4. Push Forecast
-    onProgress?.('Mengunggah data Proyeksi Anggaran (Forecast)...');
     const forecastRows = data.forecast.map(f => ({
       id: ensureUUID(f.id),
       year: Number(f.year) || 2026,
@@ -596,7 +781,8 @@ export async function pushDatabaseToSupabase(
       amount: Number(f.amount) || 0
     }));
 
-    if (forecastRows.length > 0) {
+    if (selectedTables.forecast && forecastRows.length > 0) {
+      onProgress?.('Mengunggah data Proyeksi Anggaran (Forecast)...');
       const { error: fErr } = await client
         .from('forecast')
         .upsert(forecastRows, { onConflict: 'id' });
@@ -604,7 +790,6 @@ export async function pushDatabaseToSupabase(
     }
 
     // 5. Push Realization
-    onProgress?.('Mengunggah data Realisasi Transaksi Kas...');
     const realizationRows = data.realization.map(r => ({
       id: ensureUUID(r.id),
       tanggal: (r.tanggal && r.tanggal.length >= 10) ? r.tanggal.slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -619,7 +804,8 @@ export async function pushDatabaseToSupabase(
       reconciled: Boolean(r.reconciled)
     }));
 
-    if (realizationRows.length > 0) {
+    if (selectedTables.realization && realizationRows.length > 0) {
+      onProgress?.('Mengunggah data Realisasi Transaksi Kas...');
       const { error: rErr } = await client
         .from('realization')
         .upsert(realizationRows, { onConflict: 'id' });
@@ -629,12 +815,13 @@ export async function pushDatabaseToSupabase(
     onProgress?.('Sinkronisasi Supabase selesai!');
     return {
       success: true,
+      modeUsed: options?.mode || 'append',
       counts: {
-        costCenters: costCenterRows.length,
-        masterItems: itemRows.length,
-        budget: budgetRows.length,
-        forecast: forecastRows.length,
-        realization: realizationRows.length
+        costCenters: selectedTables.costCenters ? costCenterRows.length : 0,
+        masterItems: selectedTables.masterItems ? itemRows.length : 0,
+        budget: selectedTables.budget ? budgetRows.length : 0,
+        forecast: selectedTables.forecast ? forecastRows.length : 0,
+        realization: selectedTables.realization ? realizationRows.length : 0
       }
     };
   } catch (err: any) {

@@ -44,9 +44,9 @@ interface BulkUploadModalProps {
   defaultTarget?: BulkUploadTarget;
   costCenters: MasterCostCenter[];
   masterItems: MasterItem[];
-  onBatchAddBudget: (records: Omit<BudgetRecord, 'id'>[]) => void;
-  onBatchAddForecast: (records: Omit<ForecastRecord, 'id'>[]) => void;
-  onBatchAddRealization: (records: Omit<RealizationRecord, 'id'>[]) => void;
+  onBatchAddBudget: (records: Omit<BudgetRecord, 'id'>[], mode?: 'append' | 'overwrite') => void;
+  onBatchAddForecast: (records: Omit<ForecastRecord, 'id'>[], mode?: 'append' | 'overwrite') => void;
+  onBatchAddRealization: (records: Omit<RealizationRecord, 'id'>[], mode?: 'append' | 'overwrite') => void;
   darkMode: boolean;
 }
 
@@ -81,6 +81,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
   const [validationSummary, setValidationSummary] = useState<PreValidationSummary | null>(null);
   const [filterMode, setFilterMode] = useState<'all' | 'valid' | 'issues'>('all');
   const [skipInvalidRows, setSkipInvalidRows] = useState<boolean>(true);
+  const [importMode, setImportMode] = useState<'append' | 'overwrite'>('append');
 
   // Batch Processing State
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -262,13 +263,13 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
     setTimeout(() => {
       if (target === 'budget') {
         const records = rowsToImport.map(r => r.parsedData as Omit<BudgetRecord, 'id'>);
-        onBatchAddBudget(records);
+        onBatchAddBudget(records, importMode);
       } else if (target === 'forecast') {
         const records = rowsToImport.map(r => r.parsedData as Omit<ForecastRecord, 'id'>);
-        onBatchAddForecast(records);
+        onBatchAddForecast(records, importMode);
       } else {
         const records = rowsToImport.map(r => r.parsedData as Omit<RealizationRecord, 'id'>);
-        onBatchAddRealization(records);
+        onBatchAddRealization(records, importMode);
       }
 
       setImportedCount(rowsToImport.length);
@@ -831,6 +832,78 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                   </tbody>
                 </table>
               </div>
+
+              {/* Database Storage Action Mode Selector (Menimpa vs Menambahkan) */}
+              <div className="p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/60 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h5 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <span>Metode Penyimpanan ke Database:</span>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-extrabold uppercase ${
+                        importMode === 'append'
+                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                      }`}>
+                        {importMode === 'append' ? 'Mode Menambahkan (Append)' : 'Mode Menimpa (Overwrite)'}
+                      </span>
+                    </h5>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      Tentukan apakah baris baru akan ditambahkan ke data yang sudah ada, atau menimpa total data skema {target.toUpperCase()}.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setImportMode('append')}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                      importMode === 'append'
+                        ? 'border-emerald-500 bg-emerald-500/10 text-emerald-950 dark:text-emerald-100 ring-1 ring-emerald-500 shadow-sm'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
+                      importMode === 'append' ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                    }`}>
+                      {importMode === 'append' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5">
+                        <span>Menambahkan (Append)</span>
+                        <span className="text-[10px] font-normal px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">Rekomendasi</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Menyisipkan baris baru ke tabel {target.toUpperCase()}. Data lama yang sudah ada di database tetap dipertahankan.
+                      </div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setImportMode('overwrite')}
+                    className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer flex items-start gap-3 ${
+                      importMode === 'overwrite'
+                        ? 'border-amber-500 bg-amber-500/10 text-amber-950 dark:text-amber-100 ring-1 ring-amber-500 shadow-sm'
+                        : 'border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800/40'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full border mt-0.5 flex items-center justify-center shrink-0 ${
+                      importMode === 'overwrite' ? 'border-amber-600 bg-amber-600 text-white' : 'border-slate-300 dark:border-slate-600'
+                    }`}>
+                      {importMode === 'overwrite' && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold flex items-center gap-1.5 text-amber-700 dark:text-amber-400">
+                        <span>Menimpa Total (Overwrite)</span>
+                      </div>
+                      <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                        Mengganti seluruh data tabel {target.toUpperCase()} dengan baris baru dari file ini. Data lama akan digantikan.
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
 
@@ -846,7 +919,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                   Batch Processing & Penyimpanan Berhasil!
                 </h4>
                 <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 max-w-md mx-auto">
-                  Sebanyak <strong>{importedCount} record data</strong> telah sukses divalidasi dan <strong>otomatis tersimpan langsung ke dalam database DABACO</strong> untuk skema {target.toUpperCase()}.
+                  Sebanyak <strong>{importedCount} record data</strong> telah sukses divalidasi dan <strong>otomatis tersimpan ({importMode === 'overwrite' ? 'Menimpa Seluruh Data' : 'Menambahkan ke Data yang Ada'})</strong> langsung ke dalam database DABACO untuk skema {target.toUpperCase()}.
                 </p>
               </div>
 
@@ -940,7 +1013,7 @@ export const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
                     <>
                       <Check className="w-4 h-4" />
                       <span>
-                        Simpan ke Database ({skipInvalidRows ? validationSummary.validCount : validationSummary.totalRows} Baris)
+                        {importMode === 'overwrite' ? 'Timpa & Simpan ke DB' : 'Tambahkan ke Database'} ({skipInvalidRows ? validationSummary.validCount : validationSummary.totalRows} Baris)
                       </span>
                     </>
                   )}

@@ -16,7 +16,8 @@ import {
   ArrowDownToLine,
   Layers,
   ShieldAlert,
-  Terminal
+  Terminal,
+  Sliders
 } from 'lucide-react';
 import { SupabaseConfig } from '../types';
 import {
@@ -41,6 +42,7 @@ interface SupabaseViewProps {
   pushProgress?: string;
   onReloadData?: (customConfig?: Partial<SupabaseConfig>) => Promise<void>;
   isLoadingData?: boolean;
+  onOpenDatabaseConsole?: () => void;
   dbSyncStatus?: 'connected' | 'empty' | 'unconfigured' | 'error';
   lastSyncTime?: string | null;
 }
@@ -55,6 +57,7 @@ export const SupabaseView: React.FC<SupabaseViewProps> = ({
   pushProgress = '',
   onReloadData,
   isLoadingData = false,
+  onOpenDatabaseConsole,
   dbSyncStatus = 'unconfigured',
   lastSyncTime = null
 }) => {
@@ -276,6 +279,17 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {onOpenDatabaseConsole && (
+            <button
+              onClick={onOpenDatabaseConsole}
+              className="flex items-center gap-2 px-4.5 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-md shadow-red-600/25 transition cursor-pointer"
+              title="Buka konsol manajemen database: opsi menimpa, menambahkan, cadangan, dan pemulihan"
+            >
+              <Sliders className="w-4 h-4" />
+              <span>Konsol Manajemen Database</span>
+            </button>
+          )}
+
           <button
             onClick={handleTestConnection}
             disabled={isTesting}
