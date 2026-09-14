@@ -231,7 +231,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Header Banner */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="p-5 sm:p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-950 dark:text-white">
             {currentMeta.title}
@@ -241,10 +241,10 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5 self-start md:self-center">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             onClick={() => setIsBulkUploadOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-semibold text-xs transition-all cursor-pointer shadow-sm"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer shadow-2xs whitespace-nowrap"
             title="Unggah berkas spreadsheet/CSV langsung ke database"
           >
             <Upload className="w-4 h-4 text-red-600" />
@@ -253,7 +253,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
 
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-semibold text-xs shadow-md shadow-red-600/30 transition-all cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-md shadow-red-600/30 transition-all cursor-pointer whitespace-nowrap"
           >
             <Plus className="w-4 h-4" />
             <span>Tambah Data Baru</span>
@@ -262,42 +262,66 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       </div>
 
       {/* Database Connection & Auto-Save Indicator Banner */}
-      <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+      <div className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3.5 ${
         darkMode
-          ? 'bg-slate-900/90 border-slate-800 shadow-sm'
-          : 'bg-gradient-to-r from-emerald-50/70 via-white to-slate-50 border-emerald-200/80 shadow-xs'
+          ? 'bg-[#0b101d] border-slate-800/90 shadow-xs'
+          : 'bg-gradient-to-r from-emerald-50/60 via-white to-slate-50/70 border-emerald-200/80 shadow-xs'
       }`}>
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+        {/* Tier 1: Connection Status & System Description */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-200/70 dark:border-slate-800/80">
           <div className="flex items-start sm:items-center gap-3">
             <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
               <Database className="w-5 h-5" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-emerald-100 text-emerald-900 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-900 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 whitespace-nowrap">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                   Database Supabase Cloud Live
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                   • Auto-Load Aktif (Bebas LocalStorage)
                 </span>
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">
-                Data dimuat langsung dari database Supabase setiap kali sistem dibuka. Gunakan tombol <strong>&quot;Push ke Supabase&quot;</strong> untuk memperbarui data di cloud database.
+              <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
+                Data dimuat langsung dari Supabase setiap kali sistem dibuka. Gunakan tombol <strong>&quot;Push ke Supabase&quot;</strong> untuk memperbarui cloud database.
               </p>
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 self-start lg:self-center shrink-0">
+          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 whitespace-nowrap shrink-0 self-start md:self-center">
+            <ShieldCheck className="w-3.5 h-3.5" />
+            <span>Tersimpan Permanen</span>
+          </div>
+        </div>
+
+        {/* Tier 2: Operations Toolbar & Data Record Counts */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 pt-0.5">
+          {/* Record Counts Pill */}
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <span className="font-bold text-slate-700 dark:text-slate-300 mr-1">Total di Database:</span>
+            <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 font-extrabold shadow-2xs whitespace-nowrap">
+              {budget.length} Data Budget
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 font-extrabold shadow-2xs whitespace-nowrap">
+              {forecast.length} Data Forecast
+            </span>
+            <span className="px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 font-extrabold shadow-2xs whitespace-nowrap">
+              {realization.length} Data Realisasi
+            </span>
+          </div>
+
+          {/* Action Buttons Toolbar */}
+          <div className="flex flex-wrap items-center gap-2">
             {onOpenDatabaseConsole && (
               <button
                 type="button"
                 onClick={onOpenDatabaseConsole}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-red-500/40 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-sm transition cursor-pointer"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-red-500/40 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white shadow-xs transition-all cursor-pointer whitespace-nowrap"
                 title="Buka konsol manajemen database: opsi menimpa, menambahkan, cadangan, dan pemulihan"
               >
                 <Sliders className="w-3.5 h-3.5" />
-                <span>Konsol Database & Sinkronisasi</span>
+                <span>Konsol Database</span>
               </button>
             )}
 
@@ -306,11 +330,11 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                 type="button"
                 onClick={onPushToSupabase}
                 disabled={isPushingSupabase}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm transition cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold border border-emerald-500/40 bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
                 title="Unggah seluruh dataset ke cloud database Supabase"
               >
                 <UploadCloud className={`w-3.5 h-3.5 ${isPushingSupabase ? 'animate-bounce' : ''}`} />
-                <span>{isPushingSupabase ? 'Pushing ke DB...' : 'Push ke Supabase'}</span>
+                <span>{isPushingSupabase ? 'Pushing...' : 'Push ke Supabase'}</span>
               </button>
             )}
 
@@ -319,7 +343,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                 type="button"
                 onClick={onReloadFromSupabase}
                 disabled={isLoadingFromSupabase}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition cursor-pointer disabled:opacity-50"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer disabled:opacity-50 whitespace-nowrap"
                 title="Ambil ulang data terbaru dari Supabase"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${isLoadingFromSupabase ? 'animate-spin text-emerald-500' : ''}`} />
@@ -331,7 +355,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               <button
                 type="button"
                 onClick={onExportBackup}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-xs transition"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
                 title="Unduh cadangan seluruh data transaksi dalam format JSON"
               >
                 <Download className="w-3.5 h-3.5 text-blue-600" />
@@ -343,35 +367,14 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
               <button
                 type="button"
                 onClick={() => setShowResetConfirm(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 transition"
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-400 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
                 title="Kembalikan database ke data standar pabrik"
               >
                 <RefreshCw className="w-3.5 h-3.5 text-amber-500" />
-                <span>Reset ke Data Default</span>
+                <span>Reset Default</span>
               </button>
             )}
           </div>
-        </div>
-
-        {/* Database Record Counts Pill */}
-        <div className="mt-3 pt-3 border-t border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 dark:text-slate-400">
-          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-            <span className="font-semibold text-slate-700 dark:text-slate-300">Total Tersimpan di Database:</span>
-            <span className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900 font-bold">
-              {budget.length} Data Budget
-            </span>
-            <span className="px-2 py-0.5 rounded-md bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900 font-bold">
-              {forecast.length} Data Forecast
-            </span>
-            <span className="px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900 font-bold">
-              {realization.length} Data Realisasi
-            </span>
-          </div>
-
-          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold">
-            <ShieldCheck className="w-3.5 h-3.5" />
-            Tersimpan Permanen di Database Sistem
-          </span>
         </div>
       </div>
 

@@ -186,7 +186,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* ========================================================= */}
         {/* LEFT ZONE: Mobile Menu + Single-Line Clean Title & Badge  */}
         {/* ========================================================= */}
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1 overflow-hidden">
           {/* Mobile Toggle Button */}
           <button
             onClick={onToggleSidebar}
@@ -201,20 +201,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Context & Title Block */}
-          <div className="min-w-0 flex items-center gap-2 sm:gap-2.5">
-            <h1 className={`text-base sm:text-lg lg:text-xl font-black tracking-tight whitespace-nowrap ${
+          <div className="min-w-0 flex items-center gap-2 sm:gap-2.5 overflow-hidden">
+            <h1 className={`text-base sm:text-lg lg:text-xl font-black tracking-tight truncate shrink-0 max-w-[240px] sm:max-w-[320px] md:max-w-none ${
               darkMode ? 'text-white' : 'text-slate-900'
             }`}>
               {meta.title}
             </h1>
 
-            <div className="hidden md:flex items-center gap-1.5 shrink-0">
+            <div className="hidden lg:flex items-center gap-1.5 shrink-0">
               <span className="inline-flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 whitespace-nowrap">
                 <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
                 Mojokerto Factory
               </span>
-              <span className="text-slate-300 dark:text-slate-700 font-normal">|</span>
-              <span className={`text-xs font-medium truncate max-w-[130px] lg:max-w-[200px] ${
+              <span className="hidden 2xl:inline text-slate-300 dark:text-slate-700 font-normal">|</span>
+              <span className={`hidden 2xl:inline text-xs font-medium truncate max-w-[150px] ${
                 darkMode ? 'text-slate-400' : 'text-slate-500'
               }`}>
                 {meta.category}
@@ -226,16 +226,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* ========================================================= */}
         {/* RIGHT ZONE: Structured Action Groups, Utilities & Profile */}
         {/* ========================================================= */}
-        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           
           {/* GROUP 1: Cloud & Data Sync Operations */}
-          <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             
             {/* Live Sync Status & Trigger Pill */}
             <button
               onClick={onQuickSync}
               disabled={isSyncing}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap relative ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 relative ${
                 isSyncing
                   ? 'bg-blue-500/10 border-blue-500/30 text-blue-500 cursor-wait'
                   : isAltPressed
@@ -262,7 +262,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onPushToSupabase}
                 disabled={isPushingSupabase}
-                className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${
+                className={`hidden xl:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   isPushingSupabase
                     ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 cursor-wait'
                     : darkMode
@@ -280,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onOpenSupabase && (
               <button
                 onClick={onOpenSupabase}
-                className={`hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer whitespace-nowrap ${
+                className={`hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                   dbSyncStatus === 'connected'
                     ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-500/20'
                     : dbSyncStatus === 'empty'
@@ -372,10 +372,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
 
           {/* Divider */}
-          <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden md:block" />
+          <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden xl:block" />
 
           {/* GROUP 3: Live Clock & Date */}
-          <div className="hidden md:flex flex-col items-end text-right justify-center">
+          <div className="hidden xl:flex flex-col items-end text-right justify-center shrink-0">
             <span className="font-mono tabular-nums font-bold text-xs leading-none text-slate-800 dark:text-slate-200">
               {timeString || '00:00:00'}
             </span>
