@@ -55,6 +55,7 @@ import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS, getRecordFY } from '../m
 import { AjinomotoLogo } from './AjinomotoLogo';
 import { DownloadConfirmModal } from './DownloadConfirmModal';
 import { motion, AnimatePresence } from 'motion/react';
+import { autoDetectCategory } from '../utils/categoryDetector';
 
 const formatCompactIDR = (val: number) => {
   if (Math.abs(val) >= 1000000000) {
@@ -219,6 +220,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const map: Record<string, string> = {};
     masterItems.forEach(mi => {
       map[mi.code] = mi.category;
+      if (mi.name) {
+        map[mi.name] = mi.category;
+      }
+      map[mi.code.toLowerCase()] = mi.category;
+      if (mi.name) {
+        map[mi.name.toLowerCase()] = mi.category;
+      }
     });
     return map;
   }, [masterItems]);
@@ -481,19 +489,19 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     const catMap: Record<string, { budget: number; forecast: number; realization: number; remarks: string[] }> = {};
 
     filteredBudget.forEach(r => {
-      const cat = itemCategoryMap[r.item] || 'Other Operational';
+      const cat = itemCategoryMap[r.item] || itemCategoryMap[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
       if (!catMap[cat]) catMap[cat] = { budget: 0, forecast: 0, realization: 0, remarks: [] };
       catMap[cat].budget += r.amount;
     });
 
     filteredForecast.forEach(r => {
-      const cat = itemCategoryMap[r.item] || 'Other Operational';
+      const cat = itemCategoryMap[r.item] || itemCategoryMap[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
       if (!catMap[cat]) catMap[cat] = { budget: 0, forecast: 0, realization: 0, remarks: [] };
       catMap[cat].forecast += r.amount;
     });
 
     filteredRealization.forEach(r => {
-      const cat = itemCategoryMap[r.item] || 'Other Operational';
+      const cat = itemCategoryMap[r.item] || itemCategoryMap[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
       if (!catMap[cat]) catMap[cat] = { budget: 0, forecast: 0, realization: 0, remarks: [] };
       catMap[cat].realization += r.amount;
       if (r.keterangan && !catMap[cat].remarks.includes(r.keterangan)) {

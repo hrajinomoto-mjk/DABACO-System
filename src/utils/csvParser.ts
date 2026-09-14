@@ -55,7 +55,7 @@ export const SCHEMA_DEFINITIONS: Record<BulkUploadTarget, SchemaFieldDefinition[
       type: 'number',
       description: 'Jumlah alokasi anggaran dalam Rupiah (misal: 150000000)',
       example: '150000000',
-      aliases: ['amount', 'nominal', 'budget', 'plafon', 'jumlah', 'nilai', 'anggaran', 'total', 'budget_plan', 'biaya']
+      aliases: ['amount', 'nominal', 'budget', 'plafon', 'jumlah', 'nilai', 'anggaran', 'total', 'budget_plan', 'biaya', 'nominal_plafon']
     }
   ],
   forecast: [
@@ -93,7 +93,7 @@ export const SCHEMA_DEFINITIONS: Record<BulkUploadTarget, SchemaFieldDefinition[
       type: 'string',
       description: 'Kode akun pengeluaran dari master item',
       example: 'HR001SALARY',
-      aliases: ['item', 'item code', 'item_code', 'kode item', 'kode_item', 'account', 'akun']
+      aliases: ['item', 'item code', 'item_code', 'kode item', 'kode_item', 'itemcode', 'account', 'akun']
     },
     {
       key: 'amount',
@@ -102,7 +102,7 @@ export const SCHEMA_DEFINITIONS: Record<BulkUploadTarget, SchemaFieldDefinition[
       type: 'number',
       description: 'Jumlah estimasi proyeksi pengeluaran',
       example: '145000000',
-      aliases: ['amount', 'nominal', 'forecast', 'proyeksi', 'estimasi', 'jumlah', 'nilai', 'prediksi']
+      aliases: ['amount', 'nominal', 'forecast', 'proyeksi', 'estimasi', 'jumlah', 'nilai', 'prediksi', 'forecastamount', 'forecast_amount']
     }
   ],
   realization: [
@@ -131,7 +131,7 @@ export const SCHEMA_DEFINITIONS: Record<BulkUploadTarget, SchemaFieldDefinition[
       type: 'string',
       description: 'Kode akun pengeluaran',
       example: 'HR001SALARY',
-      aliases: ['item', 'item code', 'item_code', 'kode item', 'kode_item', 'account', 'akun']
+      aliases: ['item', 'item code', 'item_code', 'kode item', 'kode_item', 'account', 'akun', 'itemcode']
     },
     {
       key: 'amount',
@@ -140,7 +140,7 @@ export const SCHEMA_DEFINITIONS: Record<BulkUploadTarget, SchemaFieldDefinition[
       type: 'number',
       description: 'Jumlah aktual pengeluaran dalam Rupiah',
       example: '143500000',
-      aliases: ['amount', 'nominal', 'realisasi', 'realization', 'aktual', 'actual', 'jumlah', 'nilai', 'pengeluaran', 'debet', 'debit']
+      aliases: ['amount', 'nominal', 'realisasi', 'realization', 'aktual', 'actual', 'jumlah', 'nilai', 'pengeluaran', 'debet', 'debit', 'nominal_realisasi']
     },
     {
       key: 'keterangan',
@@ -427,17 +427,46 @@ export function normalizeDate(val: string | undefined): { dateStr: string; year:
     }
   }
 
-  // 2. Check DD/MM/YYYY or DD-MM-YYYY (Indonesian format)
-  const idMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
-  if (idMatch) {
-    const d = parseInt(idMatch[1], 10);
-    const m = parseInt(idMatch[2], 10);
-    const y = parseInt(idMatch[3], 10);
-    if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+  // 2. Check DD/MM/YYYY or M/D/YYYY
+  const slashMatch = str.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/);
+  if (slashMatch) {
+    const p1 = parseInt(slashMatch[1], 10);
+    const p2 = parseInt(slashMatch[2], 10);
+    const y = parseInt(slashMatch[3], 10);
+
+    // If p1 > 12, then p1 is Day and p2 is Month (DD/MM/YYYY)
+    if (p1 > 12 && p2 <= 12) {
+      const d = p1;
+      const m = p2;
       const monthStr = normalizeMonth(String(m)) || 'Jan';
       const formattedDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       return { dateStr: formattedDate, year: y, month: monthStr };
     }
+
+    // If p2 > 12, then p1 is Month and p2 is Day (MM/DD/YYYY)
+    if (p2 > 12 && p1 <= 12) {
+      const m = p1;
+      const d = p2;
+      const monthStr = normalizeMonth(String(m)) || 'Jan';
+      const formattedDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      return { dateStr: formattedDate, year: y, month: monthStr };
+    }
+
+    // When both <= 12: Check if p2 === 1 (e.g. 4/1/2026, 5/1/2026, 6/1/2026, 7/1/2026 in spreadsheet exports)
+    if (p2 === 1 && p1 > 1 && p1 <= 12) {
+      const m = p1;
+      const d = p2;
+      const monthStr = normalizeMonth(String(m)) || 'Jan';
+      const formattedDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      return { dateStr: formattedDate, year: y, month: monthStr };
+    }
+
+    // Standard Indonesian format DD/MM/YYYY
+    const d = p1;
+    const m = p2;
+    const monthStr = normalizeMonth(String(m)) || 'Jan';
+    const formattedDate = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    return { dateStr: formattedDate, year: y, month: monthStr };
   }
 
   // 3. Fallback native Date parse
@@ -530,17 +559,17 @@ export function preValidateRows(
       }
 
       // Cost Center validation
-      const cleanCC = (rawCC || '').trim().toUpperCase();
+      const cleanCC = (rawCC || '').trim();
       if (!cleanCC) {
         errors.push({
           field: 'costCenter',
           message: 'Kode Cost Center wajib diisi',
           severity: 'error'
         });
-      } else if (!knownCostCenters.has(cleanCC)) {
+      } else if (!knownCostCenters.has(cleanCC.toUpperCase())) {
         errors.push({
           field: 'costCenter',
-          message: `Cost Center "${cleanCC}" tidak terdaftar di master (Akan tetap diimpor sebagai kode baru)`,
+          message: `Cost Center "${cleanCC}" belum ada di master (Otomatis didaftarkan)`,
           severity: 'warning'
         });
       }
@@ -628,17 +657,17 @@ export function preValidateRows(
       }
 
       // Cost Center
-      const cleanCC = (rawCC || '').trim().toUpperCase();
+      const cleanCC = (rawCC || '').trim();
       if (!cleanCC) {
         errors.push({
           field: 'costCenter',
           message: 'Kode Cost Center wajib diisi',
           severity: 'error'
         });
-      } else if (!knownCostCenters.has(cleanCC)) {
+      } else if (!knownCostCenters.has(cleanCC.toUpperCase())) {
         errors.push({
           field: 'costCenter',
-          message: `Cost Center "${cleanCC}" tidak terdaftar di master`,
+          message: `Cost Center "${cleanCC}" belum ada di master (Otomatis didaftarkan)`,
           severity: 'warning'
         });
       }

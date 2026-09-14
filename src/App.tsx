@@ -15,6 +15,7 @@ import { SupabaseView } from './components/SupabaseView';
 import { SettingsView } from './components/SettingsView';
 import { ExecutiveReportView } from './components/ExecutiveReportView';
 import { calculateCategoriesAndItems } from './utils/calculator';
+import { extractAndSyncMasterData } from './utils/categoryDetector';
 import { SendEmailModal } from './components/SendEmailModal';
 import { BulkUploadModal } from './components/BulkUploadModal';
 import { LogoutConfirmModal } from './components/LogoutConfirmModal';
@@ -144,6 +145,23 @@ export default function App() {
       console.warn('Failed to auto-persist database state to storage', e);
     }
   }, [budget, forecast, realization, costCenters, masterItems]);
+
+  // Automatically detect, adapt, and synchronize Master Items & Cost Centers from all upload/transaction data
+  useEffect(() => {
+    const { updatedMasterItems, updatedCostCenters, newItemsCount, newCostCentersCount } = extractAndSyncMasterData(
+      budget,
+      forecast,
+      realization,
+      masterItems,
+      costCenters
+    );
+    if (newItemsCount > 0) {
+      setMasterItems(updatedMasterItems);
+    }
+    if (newCostCentersCount > 0) {
+      setCostCenters(updatedCostCenters);
+    }
+  }, [budget, forecast, realization]);
 
   // Supabase Database Connection & Synchronization State
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => {
@@ -659,8 +677,43 @@ export default function App() {
   };
 
   const handleAddMasterItem = (item: MasterItem) => {
-    setMasterItems(prev => [...prev, item]);
-    showToast(`Master Item ${item.code} berhasil ditambahkan!`);
+    setMasterItems(prev => {
+      const existsIndex = prev.findIndex(i => i.code.toLowerCase() === item.code.toLowerCase());
+      if (existsIndex >= 0) {
+        const next = [...prev];
+        next[existsIndex] = item;
+        return next;
+      }
+      return [item, ...prev];
+    });
+    showToast(`Master Item "${item.code}" berhasil disimpan.`);
+  };
+
+  const handleEditMasterItem = (updatedItem: MasterItem) => {
+    setMasterItems(prev => prev.map(i => i.code === updatedItem.code ? updatedItem : i));
+    showToast(`Master Item "${updatedItem.name || updatedItem.code}" berhasil diperbarui.`);
+  };
+
+  const handleDeleteMasterItem = (code: string) => {
+    setMasterItems(prev => prev.filter(i => i.code !== code));
+    showToast(`Master Item "${code}" berhasil dihapus.`);
+  };
+
+  const handleAutoSyncMasterData = () => {
+    const { updatedMasterItems, updatedCostCenters, newItemsCount, newCostCentersCount } = extractAndSyncMasterData(
+      budget,
+      forecast,
+      realization,
+      masterItems,
+      costCenters
+    );
+    setMasterItems(updatedMasterItems);
+    setCostCenters(updatedCostCenters);
+    if (newItemsCount > 0 || newCostCentersCount > 0) {
+      showToast(`Sinkronisasi Selesai: +${newItemsCount} Master Item dan +${newCostCentersCount} Cost Center baru berhasil disesuaikan!`);
+    } else {
+      showToast(`Master data sudah sinkron dengan seluruh ${budget.length + forecast.length + realization.length} data transaksi.`);
+    }
   };
 
   const handleLoginSuccess = (userData: Partial<UserSession>) => {
@@ -1086,6 +1139,9 @@ export default function App() {
                   setDarkMode={setDarkMode}
                   masterItems={masterItems}
                   onAddMasterItem={handleAddMasterItem}
+                  onEditMasterItem={handleEditMasterItem}
+                  onDeleteMasterItem={handleDeleteMasterItem}
+                  onAutoSyncMasterData={handleAutoSyncMasterData}
                   costCenters={costCenters}
                   totalRecords={{ budget: budget.length, forecast: forecast.length, realization: realization.length }}
                   dataset={{ budget, forecast, realization, metadata: { version: '2.4', company: 'PT Ajinomoto Indonesia - PT Ajinex International, Mojokerto Factory' } }}

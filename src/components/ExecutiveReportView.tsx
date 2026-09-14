@@ -52,6 +52,7 @@ import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS } from '../mockData';
 import { AjinomotoLogo } from './AjinomotoLogo';
 import { ExecutivePresentationDeck } from './ExecutivePresentationDeck';
 import { DownloadConfirmModal } from './DownloadConfirmModal';
+import { autoDetectCategory } from '../utils/categoryDetector';
 
 interface ExecutiveReportViewProps {
   budget: BudgetRecord[];
@@ -182,22 +183,27 @@ export const ExecutiveReportView: React.FC<ExecutiveReportViewProps> = ({
     
     // Create master item category lookup
     const itemCatLookup: Record<string, string> = {};
-    masterItems.forEach(mi => { itemCatLookup[mi.code] = mi.category; });
+    masterItems.forEach(mi => {
+      itemCatLookup[mi.code] = mi.category;
+      if (mi.name) itemCatLookup[mi.name] = mi.category;
+      itemCatLookup[mi.code.toLowerCase()] = mi.category;
+      if (mi.name) itemCatLookup[mi.name.toLowerCase()] = mi.category;
+    });
 
     filteredBudget.forEach(r => {
-      const cat = itemCatLookup[r.item] || 'Other Operational';
+      const cat = itemCatLookup[r.item] || itemCatLookup[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
       if (!map[cat]) map[cat] = { budget: 0, forecast: 0, actual: 0 };
       map[cat].budget += r.amount;
     });
 
     filteredForecast.forEach(r => {
-      const cat = itemCatLookup[r.item] || 'Other Operational';
+      const cat = itemCatLookup[r.item] || itemCatLookup[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
       if (!map[cat]) map[cat] = { budget: 0, forecast: 0, actual: 0 };
       map[cat].forecast += r.amount;
     });
 
     filteredRealization.forEach(r => {
-      const cat = itemCatLookup[r.item] || 'Other Operational';
+      const cat = itemCatLookup[r.item] || itemCatLookup[r.item.toLowerCase()] || autoDetectCategory(r.item, r.costCenter);
       if (!map[cat]) map[cat] = { budget: 0, forecast: 0, actual: 0 };
       map[cat].actual += r.amount;
     });
