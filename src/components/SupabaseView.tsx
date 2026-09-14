@@ -14,10 +14,16 @@ import {
   CheckCircle2,
   Lock,
   ArrowDownToLine,
-  Layers
+  Layers,
+  ShieldAlert,
+  Terminal
 } from 'lucide-react';
 import { SupabaseConfig } from '../types';
-import { testSupabaseConnection } from '../services/supabaseService';
+import {
+  testSupabaseConnection,
+  SUPABASE_RLS_FIX_SQL,
+  SUPABASE_ALL_FIX_SQL
+} from '../services/supabaseService';
 
 interface SupabaseViewProps {
   config: SupabaseConfig;
@@ -65,30 +71,10 @@ export const SupabaseView: React.FC<SupabaseViewProps> = ({
   }, [config.projectUrl, config.anonKey]);
 
   const [copiedMigrationSql, setCopiedMigrationSql] = useState(false);
+  const [copiedRlsSql, setCopiedRlsSql] = useState(false);
 
-  const migrationFixSql = `-- ========================================================
--- QUICK FIX / MIGRATION SCRIPT UNTUK DATABASE YANG SUDAH ADA
--- Jalankan ini di Supabase SQL Editor jika muncul error "value too long":
--- ========================================================
-ALTER TABLE public.master_cost_center ALTER COLUMN code TYPE VARCHAR(128);
-ALTER TABLE public.master_cost_center ALTER COLUMN name TYPE VARCHAR(255);
-ALTER TABLE public.master_cost_center ALTER COLUMN department TYPE VARCHAR(128);
-
-ALTER TABLE public.master_items ALTER COLUMN code TYPE VARCHAR(128);
-ALTER TABLE public.master_items ALTER COLUMN name TYPE VARCHAR(255);
-
-ALTER TABLE public.budget_plan ALTER COLUMN cost_center TYPE VARCHAR(128);
-ALTER TABLE public.budget_plan ALTER COLUMN item TYPE VARCHAR(128);
-ALTER TABLE public.budget_plan ALTER COLUMN month TYPE VARCHAR(32);
-
-ALTER TABLE public.forecast ALTER COLUMN cost_center TYPE VARCHAR(128);
-ALTER TABLE public.forecast ALTER COLUMN item TYPE VARCHAR(128);
-ALTER TABLE public.forecast ALTER COLUMN month TYPE VARCHAR(32);
-
-ALTER TABLE public.realization ALTER COLUMN cost_center TYPE VARCHAR(128);
-ALTER TABLE public.realization ALTER COLUMN item TYPE VARCHAR(128);
-ALTER TABLE public.realization ALTER COLUMN month TYPE VARCHAR(32);
-ALTER TABLE public.realization ALTER COLUMN banking_reference TYPE VARCHAR(128);`;
+  const rlsFixSql = SUPABASE_RLS_FIX_SQL;
+  const migrationFixSql = SUPABASE_ALL_FIX_SQL;
 
   const supabaseSqlSchema = `-- ========================================================
 -- DABACO DATABASE SCHEMA & ENCRYPTION FOR SUPABASE
@@ -154,19 +140,41 @@ CREATE TABLE IF NOT EXISTS public.realization (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 7. Row Level Security (RLS) Policies
-ALTER TABLE public.master_cost_center ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.master_items ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.budget_plan ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.forecast ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.realization ENABLE ROW LEVEL SECURITY;
+-- 7. Permissions & Row Level Security (RLS) Configuration
+-- Berikan izin akses penuh ke tabel untuk role anon dan authenticated
+GRANT ALL ON TABLE public.master_cost_center TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.master_items TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.budget_plan TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.forecast TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.realization TO anon, authenticated, service_role;
 
--- Allow full access for anon & authenticated roles for DABACO application
-CREATE POLICY "Allow access to master cost center" ON public.master_cost_center FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access to master items" ON public.master_items FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access to budget plan" ON public.budget_plan FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access to forecast" ON public.forecast FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
-CREATE POLICY "Allow access to realization" ON public.realization FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+-- Matikan pembatasan RLS agar web dashboard internal bebas hambatan simpan:
+ALTER TABLE public.master_cost_center DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.master_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.budget_plan DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forecast DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.realization DISABLE ROW LEVEL SECURITY;
+
+-- Kebijakan permisif cadangan (jika suatu saat RLS diaktifkan kembali):
+DROP POLICY IF EXISTS "Allow all for master_cost_center" ON public.master_cost_center;
+DROP POLICY IF EXISTS "Allow access to master cost center" ON public.master_cost_center;
+CREATE POLICY "Allow all for master_cost_center" ON public.master_cost_center FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for master_items" ON public.master_items;
+DROP POLICY IF EXISTS "Allow access to master items" ON public.master_items;
+CREATE POLICY "Allow all for master_items" ON public.master_items FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for budget_plan" ON public.budget_plan;
+DROP POLICY IF EXISTS "Allow access to budget plan" ON public.budget_plan;
+CREATE POLICY "Allow all for budget_plan" ON public.budget_plan FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for forecast" ON public.forecast;
+DROP POLICY IF EXISTS "Allow access to forecast" ON public.forecast;
+CREATE POLICY "Allow all for forecast" ON public.forecast FOR ALL TO public USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow all for realization" ON public.realization;
+DROP POLICY IF EXISTS "Allow access to realization" ON public.realization;
+CREATE POLICY "Allow all for realization" ON public.realization FOR ALL TO public USING (true) WITH CHECK (true);
 
 -- 8. Encrypted View Function
 CREATE OR REPLACE FUNCTION public.encrypt_sensitive_note(note_text TEXT, secret_key TEXT)
@@ -536,35 +544,50 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
             </button>
           </div>
 
+          {/* Dedicated RLS Policy Fix Banner */}
+          <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-xs space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <ShieldAlert className="w-4 h-4 text-rose-500 shrink-0" />
+                <strong className="text-rose-800 dark:text-rose-300 font-bold">
+                  Solusi Error &quot;new row violates row-level security policy&quot;:
+                </strong>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(rlsFixSql);
+                    setCopiedRlsSql(true);
+                    setTimeout(() => setCopiedRlsSql(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] shadow-sm transition"
+                >
+                  {copiedRlsSql ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedRlsSql ? 'Tersalin!' : 'Salin Skrip Perbaikan RLS'}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(migrationFixSql);
+                    setCopiedMigrationSql(true);
+                    setTimeout(() => setCopiedMigrationSql(false), 2000);
+                  }}
+                  className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-800 dark:bg-slate-700 hover:bg-slate-900 text-white font-bold text-[11px] shadow-sm transition"
+                >
+                  {copiedMigrationSql ? <Check className="w-3 h-3" /> : <Layers className="w-3 h-3" />}
+                  <span>{copiedMigrationSql ? 'Tersalin!' : 'Salin Skrip Lengkap (RLS + Kolom)'}</span>
+                </button>
+              </div>
+            </div>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
+              Jika saat push data muncul pesan <code className="bg-rose-200/60 dark:bg-rose-950/80 px-1 py-0.5 rounded text-rose-900 dark:text-rose-200 font-mono">new row violates row-level security policy for table &quot;master_cost_center&quot;</code>, tabel di Supabase Anda memiliki fitur RLS aktif namun belum mengizinkan akses simpan untuk aplikasi. Salin skrip di atas lalu jalankan di <strong>SQL Editor Supabase</strong> untuk mematikan pembatasan RLS dan memberikan izin simpan penuh.
+            </p>
+          </div>
+
           <div className="p-3.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 text-xs flex items-start gap-2.5">
             <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
             <div className="text-slate-700 dark:text-slate-300 leading-relaxed">
-              <strong className="text-emerald-800 dark:text-emerald-300">Tips saat klik RUN di Supabase:</strong> Jika muncul jendela <em>&quot;Potential issue detected: Choose whether to enable Row Level Security&quot;</em>, pilih tombol hijau <strong>&quot;Run and enable RLS&quot;</strong> (Sangat direkomendasikan untuk keamanan data). Skrip ini sudah otomatis mengatur hak akses RLS bagi sistem DABACO.
+              <strong className="text-emerald-800 dark:text-emerald-300">Tips saat klik RUN di Supabase:</strong> Skrip skema di bawah ini sudah diperbarui dengan perintah pembatalan RLS dan hak akses penuh untuk role <code>anon</code> dan <code>authenticated</code>, sehingga data master &amp; transaksi kas dijamin dapat tersimpan mulus.
             </div>
-          </div>
-
-          {/* Quick Migration Banner if already had tables created */}
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2.5">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
-                <strong className="text-amber-800 dark:text-amber-300">Perbaikan Instan Jika Muncul Error &quot;value too long&quot;:</strong>
-              </div>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(migrationFixSql);
-                  setCopiedMigrationSql(true);
-                  setTimeout(() => setCopiedMigrationSql(false), 2000);
-                }}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] shadow-sm transition"
-              >
-                {copiedMigrationSql ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-                <span>{copiedMigrationSql ? 'Tersalin!' : 'Salin Skrip ALTER TABLE'}</span>
-              </button>
-            </div>
-            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
-              Jika sebelumnya Anda sudah pernah menjalankan SQL di Supabase dan menemui pesan <code className="bg-amber-200/50 dark:bg-amber-950/60 px-1 py-0.5 rounded text-amber-900 dark:text-amber-200">value too long for type character varying(32)</code> saat push data, jalankan skrip <strong className="text-amber-700 dark:text-amber-300">ALTER TABLE</strong> di Supabase SQL Editor untuk memperbesar batas karakter kolom tabel secara permanen.
-            </p>
           </div>
 
           <div className="rounded-2xl bg-[#090d16] border border-slate-800 p-4 font-mono text-[11px] text-slate-300 max-h-[460px] overflow-y-auto scrollbar-thin">

@@ -20,6 +20,7 @@ import { BulkUploadModal } from './components/BulkUploadModal';
 import { LogoutConfirmModal } from './components/LogoutConfirmModal';
 import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { AltKeyGuideHUD } from './components/AltKeyGuideHUD';
+import { RlsFixModal } from './components/RlsFixModal';
 
 import {
   INITIAL_BUDGET,
@@ -240,11 +241,19 @@ export default function App() {
           'success'
         );
       } else {
-        showToast(res.error || 'Gagal mengunggah data ke Supabase.', 'error');
+        const errorMsg = res.error || 'Gagal mengunggah data ke Supabase.';
+        showToast(errorMsg, 'error');
+        if (res.isRlsError || errorMsg.toLowerCase().includes('row-level security')) {
+          setShowRlsFixModal(true);
+        }
       }
     } catch (err: any) {
       console.error('Error during push to Supabase:', err);
-      showToast(err?.message || 'Terjadi kesalahan saat push data ke database.', 'error');
+      const errMsg = err?.message || 'Terjadi kesalahan saat push data ke database.';
+      showToast(errMsg, 'error');
+      if (errMsg.toLowerCase().includes('row-level security')) {
+        setShowRlsFixModal(true);
+      }
     } finally {
       setIsPushingToSupabase(false);
       setPushProgressMessage('');
@@ -337,6 +346,7 @@ export default function App() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState<boolean>(false);
   const [isAltPressed, setIsAltPressed] = useState<boolean>(false);
   const [showShortcutsModal, setShowShortcutsModal] = useState<boolean>(false);
+  const [showRlsFixModal, setShowRlsFixModal] = useState<boolean>(false);
 
   // Active Alerts
   const [alerts, setAlerts] = useState<AlertNotification[]>([
@@ -683,15 +693,23 @@ export default function App() {
     }`}>
       {/* Global Toast Notification */}
       {toast && (
-        <div className="fixed top-5 right-5 z-[9999] animate-in slide-in-from-top-4 duration-300">
-          <div className={`px-4 py-3 rounded-2xl shadow-xl border text-xs font-semibold flex items-center gap-2.5 ${
+        <div className="fixed top-5 right-5 z-[9999] animate-in slide-in-from-top-4 duration-300 max-w-lg">
+          <div className={`px-4 py-3 rounded-2xl shadow-xl border text-xs font-semibold flex items-center justify-between gap-3 ${
             toast.type === 'error'
               ? 'bg-rose-600 text-white border-rose-500 shadow-rose-600/30'
               : toast.type === 'warning'
               ? 'bg-amber-500 text-white border-amber-400 shadow-amber-500/30'
               : 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-600/30'
           }`}>
-            <span>{toast.message}</span>
+            <span className="leading-relaxed">{toast.message}</span>
+            {toast.type === 'error' && toast.message.toLowerCase().includes('row-level security') && (
+              <button
+                onClick={() => setShowRlsFixModal(true)}
+                className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold underline shrink-0 transition"
+              >
+                Solusi RLS
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -986,6 +1004,15 @@ export default function App() {
       <AltKeyGuideHUD
         isVisible={isAltPressed && !showShortcutsModal}
         onOpenFullGuide={() => setShowShortcutsModal(true)}
+      />
+
+      {/* Supabase Row-Level Security (RLS) Policy Fix Modal */}
+      <RlsFixModal
+        isOpen={showRlsFixModal}
+        onClose={() => setShowRlsFixModal(false)}
+        onRetryPush={() => handlePushDataToSupabase()}
+        projectUrl={supabaseConfig.projectUrl}
+        darkMode={darkMode}
       />
     </div>
   );

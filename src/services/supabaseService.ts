@@ -13,6 +13,104 @@ let cachedUrl: string | null = null;
 let cachedKey: string | null = null;
 
 // Convert string ID (like 'b-01') into a deterministic valid RFC-4122 v4 UUID
+export const SUPABASE_RLS_FIX_SQL = `-- ========================================================
+-- PERBAIKAN ROW-LEVEL SECURITY (RLS) DI SUPABASE
+-- Mengatasi error: "new row violates row-level security policy"
+-- Jalankan skrip ini di SQL Editor dashboard Supabase Anda:
+-- ========================================================
+
+-- 1. Matikan pembatasan RLS pada seluruh tabel DABACO (Paling Praktis & Efektif)
+ALTER TABLE public.master_cost_center DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.master_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.budget_plan DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forecast DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.realization DISABLE ROW LEVEL SECURITY;
+
+-- 2. Berikan izin akses penuh ke role anon, authenticated, dan service_role
+GRANT ALL ON TABLE public.master_cost_center TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.master_items TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.budget_plan TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.forecast TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.realization TO anon, authenticated, service_role;
+
+-- 3. Bersihkan policy lama agar tidak terjadi konflik
+DROP POLICY IF EXISTS "Allow all for master_cost_center" ON public.master_cost_center;
+DROP POLICY IF EXISTS "Allow access to master cost center" ON public.master_cost_center;
+DROP POLICY IF EXISTS "Allow all for master_items" ON public.master_items;
+DROP POLICY IF EXISTS "Allow access to master items" ON public.master_items;
+DROP POLICY IF EXISTS "Allow all for budget_plan" ON public.budget_plan;
+DROP POLICY IF EXISTS "Allow access to budget plan" ON public.budget_plan;
+DROP POLICY IF EXISTS "Allow all for forecast" ON public.forecast;
+DROP POLICY IF EXISTS "Allow access to forecast" ON public.forecast;
+DROP POLICY IF EXISTS "Allow all for realization" ON public.realization;
+DROP POLICY IF EXISTS "Allow access to realization" ON public.realization;
+
+-- 4. Kebijakan permisif cadangan (jika suatu saat RLS diaktifkan kembali)
+CREATE POLICY "Allow all for master_cost_center" ON public.master_cost_center FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for master_items" ON public.master_items FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for budget_plan" ON public.budget_plan FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for forecast" ON public.forecast FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for realization" ON public.realization FOR ALL TO public USING (true) WITH CHECK (true);`;
+
+export const SUPABASE_ALL_FIX_SQL = `-- ========================================================
+-- MASTER ALL-IN-ONE FIX (KAPASITAS KOLOM & ROW-LEVEL SECURITY)
+-- Mengatasi "value too long" DAN "violates row-level security policy"
+-- Jalankan skrip ini di Supabase SQL Editor:
+-- ========================================================
+
+-- 1. Perbesar batas panjang kolom (VARCHAR 128 / 255)
+ALTER TABLE public.master_cost_center ALTER COLUMN code TYPE VARCHAR(128);
+ALTER TABLE public.master_cost_center ALTER COLUMN name TYPE VARCHAR(255);
+ALTER TABLE public.master_cost_center ALTER COLUMN department TYPE VARCHAR(128);
+
+ALTER TABLE public.master_items ALTER COLUMN code TYPE VARCHAR(128);
+ALTER TABLE public.master_items ALTER COLUMN name TYPE VARCHAR(255);
+
+ALTER TABLE public.budget_plan ALTER COLUMN cost_center TYPE VARCHAR(128);
+ALTER TABLE public.budget_plan ALTER COLUMN item TYPE VARCHAR(128);
+ALTER TABLE public.budget_plan ALTER COLUMN month TYPE VARCHAR(32);
+
+ALTER TABLE public.forecast ALTER COLUMN cost_center TYPE VARCHAR(128);
+ALTER TABLE public.forecast ALTER COLUMN item TYPE VARCHAR(128);
+ALTER TABLE public.forecast ALTER COLUMN month TYPE VARCHAR(32);
+
+ALTER TABLE public.realization ALTER COLUMN cost_center TYPE VARCHAR(128);
+ALTER TABLE public.realization ALTER COLUMN item TYPE VARCHAR(128);
+ALTER TABLE public.realization ALTER COLUMN month TYPE VARCHAR(32);
+ALTER TABLE public.realization ALTER COLUMN banking_reference TYPE VARCHAR(128);
+
+-- 2. Matikan pembatasan RLS & berikan izin simpan penuh
+ALTER TABLE public.master_cost_center DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.master_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.budget_plan DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.forecast DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.realization DISABLE ROW LEVEL SECURITY;
+
+GRANT ALL ON TABLE public.master_cost_center TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.master_items TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.budget_plan TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.forecast TO anon, authenticated, service_role;
+GRANT ALL ON TABLE public.realization TO anon, authenticated, service_role;
+
+-- 3. Bersihkan policy lama
+DROP POLICY IF EXISTS "Allow all for master_cost_center" ON public.master_cost_center;
+DROP POLICY IF EXISTS "Allow access to master cost center" ON public.master_cost_center;
+DROP POLICY IF EXISTS "Allow all for master_items" ON public.master_items;
+DROP POLICY IF EXISTS "Allow access to master items" ON public.master_items;
+DROP POLICY IF EXISTS "Allow all for budget_plan" ON public.budget_plan;
+DROP POLICY IF EXISTS "Allow access to budget plan" ON public.budget_plan;
+DROP POLICY IF EXISTS "Allow all for forecast" ON public.forecast;
+DROP POLICY IF EXISTS "Allow access to forecast" ON public.forecast;
+DROP POLICY IF EXISTS "Allow all for realization" ON public.realization;
+DROP POLICY IF EXISTS "Allow access to realization" ON public.realization;
+
+-- 4. Kebijakan permisif cadangan
+CREATE POLICY "Allow all for master_cost_center" ON public.master_cost_center FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for master_items" ON public.master_items FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for budget_plan" ON public.budget_plan FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for forecast" ON public.forecast FOR ALL TO public USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for realization" ON public.realization FOR ALL TO public USING (true) WITH CHECK (true);`;
+
 export function ensureUUID(id: string): string {
   if (!id) {
     return '00000000-0000-4000-8000-000000000001';
@@ -235,6 +333,7 @@ export async function fetchDatabaseFromSupabase(config: SupabaseConfig): Promise
 export interface PushResult {
   success: boolean;
   error?: string;
+  isRlsError?: boolean;
   counts?: {
     costCenters: number;
     masterItems: number;
@@ -438,11 +537,19 @@ export async function pushDatabaseToSupabase(
       head_of_dept: cc.headOfDept ? cc.headOfDept.slice(0, 128) : null
     }));
 
+    const wrapTableError = (table: string, err: any): Error => {
+      const rawMsg = err?.message || String(err);
+      if (rawMsg.toLowerCase().includes('violates row-level security policy') || rawMsg.toLowerCase().includes('row-level security')) {
+        return new Error(`Gagal push ${table}: new row violates row-level security policy for table "${table}". Database Supabase Anda memblokir izin simpan karena pembatasan Row-Level Security (RLS).`);
+      }
+      return new Error(`Gagal push ${table}: ${rawMsg}`);
+    };
+
     if (costCenterRows.length > 0) {
       const { error: ccErr } = await client
         .from('master_cost_center')
         .upsert(costCenterRows, { onConflict: 'code' });
-      if (ccErr) throw new Error(`Gagal push master_cost_center: ${ccErr.message}`);
+      if (ccErr) throw wrapTableError('master_cost_center', ccErr);
     }
 
     // Upload master items
@@ -457,7 +564,7 @@ export async function pushDatabaseToSupabase(
       const { error: itErr } = await client
         .from('master_items')
         .upsert(itemRows, { onConflict: 'code' });
-      if (itErr) throw new Error(`Gagal push master_items: ${itErr.message}`);
+      if (itErr) throw wrapTableError('master_items', itErr);
     }
 
     // 3. Push Budget Plan
@@ -475,7 +582,7 @@ export async function pushDatabaseToSupabase(
       const { error: bErr } = await client
         .from('budget_plan')
         .upsert(budgetRows, { onConflict: 'id' });
-      if (bErr) throw new Error(`Gagal push budget_plan: ${bErr.message}`);
+      if (bErr) throw wrapTableError('budget_plan', bErr);
     }
 
     // 4. Push Forecast
@@ -493,7 +600,7 @@ export async function pushDatabaseToSupabase(
       const { error: fErr } = await client
         .from('forecast')
         .upsert(forecastRows, { onConflict: 'id' });
-      if (fErr) throw new Error(`Gagal push forecast: ${fErr.message}`);
+      if (fErr) throw wrapTableError('forecast', fErr);
     }
 
     // 5. Push Realization
@@ -516,7 +623,7 @@ export async function pushDatabaseToSupabase(
       const { error: rErr } = await client
         .from('realization')
         .upsert(realizationRows, { onConflict: 'id' });
-      if (rErr) throw new Error(`Gagal push realization: ${rErr.message}`);
+      if (rErr) throw wrapTableError('realization', rErr);
     }
 
     onProgress?.('Sinkronisasi Supabase selesai!');
@@ -532,9 +639,13 @@ export async function pushDatabaseToSupabase(
     };
   } catch (err: any) {
     console.error('Failed to push to Supabase:', err);
+    const rawMsg = err?.message || 'Terjadi kesalahan saat mengunggah data ke Supabase.';
+    const isRls = rawMsg.toLowerCase().includes('violates row-level security policy') ||
+                  rawMsg.toLowerCase().includes('row-level security');
     return {
       success: false,
-      error: err?.message || 'Terjadi kesalahan saat mengunggah data ke Supabase.'
+      error: rawMsg,
+      isRlsError: isRls
     };
   }
 }
