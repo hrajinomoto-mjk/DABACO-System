@@ -28,6 +28,7 @@ import {
   MasterItem,
   SupabaseConfig
 } from '../types';
+import { DownloadConfirmModal } from './DownloadConfirmModal';
 import {
   pushDatabaseToSupabase,
   fetchDatabaseFromSupabase,
@@ -107,6 +108,7 @@ export const DatabaseConsoleModal: React.FC<DatabaseConsoleModalProps> = ({
   const [pullMode, setPullMode] = useState<'overwrite' | 'merge'>('overwrite');
   const [isPulling, setIsPulling] = useState(false);
   const [pullProgress, setPullProgress] = useState<string>('');
+  const [showDownloadConfirm, setShowDownloadConfirm] = useState(false);
 
   // Clear tables state
   const [clearTarget, setClearTarget] = useState<'transactions_only' | 'all_tables'>('transactions_only');
@@ -774,7 +776,7 @@ export const DatabaseConsoleModal: React.FC<DatabaseConsoleModalProps> = ({
                 <div className="pt-2">
                   <button
                     type="button"
-                    onClick={handleDownloadBackup}
+                    onClick={() => setShowDownloadConfirm(true)}
                     className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md shadow-purple-600/20 transition cursor-pointer"
                   >
                     <FileDown className="w-4 h-4" />
@@ -1019,6 +1021,21 @@ export const DatabaseConsoleModal: React.FC<DatabaseConsoleModalProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Confirmation Modal for Database Backup Download */}
+      <DownloadConfirmModal
+        isOpen={showDownloadConfirm}
+        onClose={() => setShowDownloadConfirm(false)}
+        onConfirm={() => {
+          setShowDownloadConfirm(false);
+          handleDownloadBackup();
+        }}
+        downloadType="json"
+        fileName={`dabaco_backup_${new Date().toISOString().slice(0, 10)}.json`}
+        description="Berkas JSON cadangan ini memuat seluruh data DABACO: Anggaran, Forecast, Realisasi Kas Aktual, Master Cost Centers, dan Master Item."
+        itemCount={budget.length + forecast.length + realization.length}
+        darkMode={darkMode}
+      />
     </div>
   );
 };

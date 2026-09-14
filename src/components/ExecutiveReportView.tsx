@@ -51,6 +51,7 @@ import { formatIDR, exportCSV, generateExecutivePDF } from '../utils/pdfGenerato
 import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS } from '../mockData';
 import { AjinomotoLogo } from './AjinomotoLogo';
 import { ExecutivePresentationDeck } from './ExecutivePresentationDeck';
+import { DownloadConfirmModal } from './DownloadConfirmModal';
 
 interface ExecutiveReportViewProps {
   budget: BudgetRecord[];
@@ -76,6 +77,13 @@ export const ExecutiveReportView: React.FC<ExecutiveReportViewProps> = ({
   const [selectedCostCenter, setSelectedCostCenter] = useState<string>('ALL');
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [isPresentationMode, setIsPresentationMode] = useState(false);
+  const [confirmDownloadState, setConfirmDownloadState] = useState<{
+    isOpen: boolean;
+    type: 'pdf' | 'csv';
+    fileName: string;
+    description: string;
+    count?: number;
+  } | null>(null);
 
   // Month mapping based on period (Fiscal Year starts in April: Q1: Apr-Jun, Q2: Jul-Sep, Q3: Oct-Dec, Q4: Jan-Mar next year)
   const periodMonths = useMemo(() => {
@@ -257,6 +265,27 @@ export const ExecutiveReportView: React.FC<ExecutiveReportViewProps> = ({
     if (onShowToast) onShowToast('Dossier Laporan Eksekutif PDF siap diunduh.');
   };
 
+  const requestExportPDF = () => {
+    const periodLabel = selectedPeriod === 'ALL' ? 'FY2026' : `FY2026_${selectedPeriod}`;
+    setConfirmDownloadState({
+      isOpen: true,
+      type: 'pdf',
+      fileName: `Dossier_Eksekutif_Ajinomoto_${periodLabel}_${selectedCostCenter}.pdf`,
+      description: `Dossier Laporan Eksekutif Keuangan PT Ajinomoto Indonesia untuk Periode ${selectedPeriod === 'ALL' ? 'FY 2026 Penuh' : `Kuartal ${selectedPeriod}`} (${selectedCostCenter === 'ALL' ? 'Seluruh Departemen Pabrik' : selectedCostCenter}).`,
+      count: monthlyChartData.length
+    });
+  };
+
+  const requestExportCSV = () => {
+    setConfirmDownloadState({
+      isOpen: true,
+      type: 'csv',
+      fileName: `dabaco_rekap_eksekutif_${selectedPeriod}_${new Date().toISOString().slice(0, 10)}.csv`,
+      description: 'Ekspor berkas spreadsheet CSV komprehensif seluruh transaksi Budget Plan, Forecast, dan Realisasi.',
+      count: budget.length + forecast.length + realization.length
+    });
+  };
+
   // Copy structured executive briefing to clipboard
   const handleCopyExecutiveSummary = () => {
     const periodLabel = selectedPeriod === 'ALL' ? 'YTD 2026' : selectedPeriod;
@@ -299,8 +328,8 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
       }`}>
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-200 dark:border-slate-800">
           <div className="flex items-start gap-4">
-            <div className="p-2.5 rounded-2xl bg-red-600/10 dark:bg-red-500/10 border border-red-500/20 shrink-0">
-              <AjinomotoLogo variant="symbol" className="w-10 h-10" />
+            <div className="h-14 px-3.5 py-1.5 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-center shrink-0">
+              <AjinomotoLogo variant="full" className="h-9 w-auto" />
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
@@ -341,7 +370,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
             </button>
 
             <button
-              onClick={() => exportCSV(budget, forecast, realization)}
+              onClick={requestExportCSV}
               className="flex items-center gap-1.5 px-3.5 py-2.5 text-xs font-semibold rounded-xl border border-slate-300 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 transition-all cursor-pointer"
               title="Ekspor Data Excel / CSV"
             >
@@ -350,7 +379,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
             </button>
 
             <button
-              onClick={handleExportPDF}
+              onClick={requestExportPDF}
               className="flex items-center gap-1.5 px-4 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white shadow-md shadow-red-600/25 transition-all cursor-pointer"
               title="Unduh Laporan Eksekutif Format PDF Resmi"
             >
@@ -856,6 +885,25 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
         departmentPerformance={departmentPerformance}
         categoryAnalysis={categoryAnalysis}
         monthlyChartData={monthlyChartData}
+      />
+
+      {/* Confirmation Modal for Downloads (CSV & Executive PDF) */}
+      <DownloadConfirmModal
+        isOpen={!!confirmDownloadState?.isOpen}
+        onClose={() => setConfirmDownloadState(null)}
+        onConfirm={() => {
+          if (confirmDownloadState?.type === 'pdf') {
+            handleExportPDF();
+          } else if (confirmDownloadState?.type === 'csv') {
+            exportCSV(budget, forecast, realization);
+          }
+          setConfirmDownloadState(null);
+        }}
+        downloadType={confirmDownloadState?.type || 'csv'}
+        fileName={confirmDownloadState?.fileName || 'dabaco_eksekutif_export.csv'}
+        description={confirmDownloadState?.description}
+        itemCount={confirmDownloadState?.count}
+        darkMode={darkMode}
       />
     </div>
   );

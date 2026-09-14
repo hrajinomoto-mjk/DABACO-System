@@ -5,6 +5,8 @@ import { formatIDR } from '../utils/pdfGenerator';
 import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS, getRecordFY } from '../mockData';
 import { BulkUploadModal } from './BulkUploadModal';
 import { SystemAlertModal } from './SystemAlertModal';
+import { DownloadConfirmModal } from './DownloadConfirmModal';
+import { ChangeConfirmModal } from './ChangeConfirmModal';
 
 export type ManagementType = 'budget' | 'forecast' | 'realization';
 
@@ -76,6 +78,13 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const [showBackupDownloadConfirm, setShowBackupDownloadConfirm] = useState(false);
+  const [showChangeConfirm, setShowChangeConfirm] = useState(false);
+  const [pendingChangeDetails, setPendingChangeDetails] = useState<{
+    actionType: 'create' | 'update';
+    title: string;
+    details: Array<{ label: string; value: string }>;
+  } | null>(null);
 
   // Modern Confirmation Pop-up state for deleting data rows
   const [deleteTarget, setDeleteTarget] = useState<{
@@ -149,6 +158,26 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
   const handleFormSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
+    const selectedItemName = itemNameMap[formItem] || formItem;
+    const actionKind: 'create' | 'update' = editingId ? 'update' : 'create';
+    const typeTitle = type === 'budget' ? 'Budget Plan' : type === 'forecast' ? 'Forecast' : 'Realisasi Kas';
+
+    setPendingChangeDetails({
+      actionType: actionKind,
+      title: editingId ? `Konfirmasi Perubahan ${typeTitle}` : `Konfirmasi Penambahan ${typeTitle}`,
+      details: [
+        { label: 'Tipe Data', value: typeTitle },
+        { label: 'Cost Center', value: formCostCenter },
+        { label: 'Item Rekord', value: `${formItem} - ${selectedItemName}` },
+        { label: 'Periode / Tahun', value: `${formMonth} ${formYear}` },
+        { label: 'Nominal Biaya', value: formatIDR(Number(formAmount)) },
+        ...(formKeterangan ? [{ label: 'Keterangan', value: formKeterangan }] : [])
+      ]
+    });
+    setShowChangeConfirm(true);
+  };
+
+  const executeConfirmedSave = () => {
     if (type === 'budget') {
       if (editingId) {
         onEditBudget(editingId, {
@@ -209,6 +238,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
       }
     }
 
+    setShowChangeConfirm(false);
     setIsModalOpen(false);
   };
 
@@ -354,7 +384,7 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
             {onExportBackup && (
               <button
                 type="button"
-                onClick={onExportBackup}
+                onClick={() => setShowBackupDownloadConfirm(true)}
                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 shadow-2xs transition-all cursor-pointer whitespace-nowrap"
                 title="Unduh cadangan seluruh data transaksi dalam format JSON"
               >
@@ -696,6 +726,31 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
         confirmLabel="Ya, Reset Database"
         cancelLabel="Batal"
         detail="Operasi ini berguna jika Anda ingin menghapus data percobaan dan memulai kembali dengan dataset default."
+        darkMode={darkMode}
+      />
+
+      {/* Confirmation Modal for Downloading Database Backup JSON */}
+      <DownloadConfirmModal
+        isOpen={showBackupDownloadConfirm}
+        onClose={() => setShowBackupDownloadConfirm(false)}
+        onConfirm={() => {
+          if (onExportBackup) onExportBackup();
+        }}
+        downloadType="json"
+        fileName={`dabaco_backup_${new Date().toISOString().slice(0, 10)}.json`}
+        description="Berkas cadangan JSON berisi seluruh tabel database DABACO: Budget Plan, Forecast, Realisasi Aktual, Master Cost Centers, dan Master Items."
+        itemCount={rows.length}
+        darkMode={darkMode}
+      />
+
+      {/* Confirmation Modal for Creating or Updating Record */}
+      <ChangeConfirmModal
+        isOpen={showChangeConfirm}
+        onClose={() => setShowChangeConfirm(false)}
+        onConfirm={executeConfirmedSave}
+        actionType={pendingChangeDetails?.actionType || 'update'}
+        title={pendingChangeDetails?.title}
+        details={pendingChangeDetails?.details}
         darkMode={darkMode}
       />
     </div>

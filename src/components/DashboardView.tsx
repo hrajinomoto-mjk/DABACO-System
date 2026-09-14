@@ -53,6 +53,7 @@ import {
 import { formatIDR, exportCSV, generateExecutivePDF } from '../utils/pdfGenerator';
 import { MONTH_NAMES, FY_MONTH_NAMES, FY_MONTH_DETAILS, getRecordFY } from '../mockData';
 import { AjinomotoLogo } from './AjinomotoLogo';
+import { DownloadConfirmModal } from './DownloadConfirmModal';
 import { motion, AnimatePresence } from 'motion/react';
 
 const formatCompactIDR = (val: number) => {
@@ -190,6 +191,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [isPdfDark, setIsPdfDark] = useState<boolean>(false);
   const [hoveredMonth, setHoveredMonth] = useState<MonthlyComparison | null>(null);
   const [trendRange, setTrendRange] = useState<'6M' | '12M'>('6M');
+  const [confirmDownloadState, setConfirmDownloadState] = useState<{
+    isOpen: boolean;
+    type: 'pdf' | 'csv';
+    fileName: string;
+    description: string;
+    count?: number;
+  } | null>(null);
 
   // Listen to global open PDF event triggered by Ctrl+P
   useEffect(() => {
@@ -569,6 +577,26 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
     });
   };
 
+  const requestExportPDF = () => {
+    setConfirmDownloadState({
+      isOpen: true,
+      type: 'pdf',
+      fileName: `Dossier_Eksekutif_DABACO_FY${selectedFY}_${selectedCostCenter}.pdf`,
+      description: `Dossier Laporan Keuangan Eksekutif PT Ajinomoto Indonesia untuk FY ${selectedFY} (${selectedCostCenter === 'ALL' ? 'Semua Cost Center Pabrik' : selectedCostCenter}).`,
+      count: itemSummaries.length
+    });
+  };
+
+  const requestExportCSV = () => {
+    setConfirmDownloadState({
+      isOpen: true,
+      type: 'csv',
+      fileName: `dabaco_data_export_${new Date().toISOString().slice(0, 10)}.csv`,
+      description: 'Ekspor seluruh data transaksi anggaran (Budget Plan, Forecast, Realisasi) ke dalam format spreadsheet CSV.',
+      count: budget.length + forecast.length + realization.length
+    });
+  };
+
   // Find remarks for specific item
   const getItemRemarks = (itemNameOrCode: string) => {
     const matchingRealizations = filteredRealization.filter(r => {
@@ -693,7 +721,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             </button>
 
             <button
-              onClick={() => exportCSV(budget, forecast, realization)}
+              onClick={requestExportCSV}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xs transition-all cursor-pointer"
             >
               <FileSpreadsheet className="w-3.5 h-3.5" />
@@ -1786,8 +1814,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             {/* Modal Header */}
             <div className="p-5 sm:p-6 border-b border-slate-800 flex items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-slate-900/90 via-[#0b101c] to-slate-900/90">
               <div className="flex items-start sm:items-center gap-3.5">
-                <div className="p-2.5 rounded-2xl bg-red-600/10 dark:bg-red-500/10 border border-red-500/25 shrink-0 shadow-xs">
-                  <AjinomotoLogo variant="symbol" className="w-8 h-8" />
+                <div className="h-12 px-3 py-1 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-center shrink-0">
+                  <AjinomotoLogo variant="full" className="h-7 w-auto" />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2 mb-1">
@@ -2117,8 +2145,8 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 </button>
                 <button
                   onClick={() => {
-                    handleExportPDF();
                     setShowPdfModal(false);
+                    requestExportPDF();
                   }}
                   className="px-6 py-2.5 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:via-rose-500 hover:to-red-600 text-white font-extrabold text-xs shadow-lg shadow-red-600/30 hover:shadow-red-600/50 flex items-center gap-2 cursor-pointer transition-all transform active:scale-98"
                 >
@@ -2130,6 +2158,25 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal for Downloads (CSV & Executive PDF) */}
+      <DownloadConfirmModal
+        isOpen={!!confirmDownloadState?.isOpen}
+        onClose={() => setConfirmDownloadState(null)}
+        onConfirm={() => {
+          if (confirmDownloadState?.type === 'pdf') {
+            handleExportPDF();
+          } else if (confirmDownloadState?.type === 'csv') {
+            exportCSV(budget, forecast, realization);
+          }
+          setConfirmDownloadState(null);
+        }}
+        downloadType={confirmDownloadState?.type || 'csv'}
+        fileName={confirmDownloadState?.fileName || 'dabaco_export.csv'}
+        description={confirmDownloadState?.description}
+        itemCount={confirmDownloadState?.count}
+        darkMode={darkMode}
+      />
     </div>
   );
 };
