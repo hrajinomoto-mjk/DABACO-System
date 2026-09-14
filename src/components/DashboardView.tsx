@@ -590,24 +590,27 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className={`flex flex-col xl:flex-row xl:items-center justify-between gap-3 sm:gap-4 p-3.5 sm:p-4 rounded-2xl border transition-all ${
+        className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 p-3.5 sm:p-4 rounded-2xl border transition-all ${
           darkMode
-            ? 'bg-slate-900 border-slate-800 shadow-sm'
-            : 'bg-gradient-to-r from-white via-slate-50 to-blue-50/30 border-2 border-slate-200/90 shadow-sm'
+            ? 'bg-[#0b101d] border-slate-800/90 shadow-xs'
+            : 'bg-white border-slate-200/90 shadow-xs'
         }`}
       >
-        <div className="flex flex-wrap items-center gap-3">
+        {/* Left: Filter Controls */}
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {/* Cost Center Filter */}
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-extrabold hidden sm:inline ${darkMode ? 'text-slate-200' : 'text-slate-950'}`}>Cost Center:</span>
+            <span className={`text-xs font-bold shrink-0 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              Cost Center:
+            </span>
             <select
               id="dashboardCostCenterFilter"
               value={selectedCostCenter}
               onChange={(e) => setSelectedCostCenter(e.target.value)}
-              className={`px-3.5 py-2 text-xs rounded-xl border font-semibold outline-none transition-all ${
+              className={`px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
                 darkMode
-                  ? 'bg-slate-800/80 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500'
-                  : 'bg-white border-slate-300 text-slate-900 shadow-xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                  ? 'bg-slate-800/90 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500/40'
+                  : 'bg-slate-50 border-slate-300 text-slate-900 shadow-2xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
               }`}
             >
               <option value="ALL">Semua Cost Center (Consolidated)</option>
@@ -621,55 +624,57 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           {/* FY Filter */}
           <div className="flex items-center gap-2">
-            <span className={`text-xs font-extrabold hidden sm:inline ${darkMode ? 'text-slate-200' : 'text-slate-950'}`}>Fiscal Year:</span>
+            <span className={`text-xs font-bold shrink-0 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+              Fiscal Year:
+            </span>
             <select
               id="dashboardFYFilter"
               value={selectedFY}
               onChange={(e) => setSelectedFY(e.target.value)}
-              className={`px-3.5 py-2 text-xs rounded-xl border font-semibold outline-none transition-all ${
+              className={`px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
                 darkMode
-                  ? 'bg-slate-800/80 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500'
-                  : 'bg-white border-slate-300 text-slate-900 shadow-xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                  ? 'bg-slate-800/90 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500/40'
+                  : 'bg-slate-50 border-slate-300 text-slate-900 shadow-2xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
               }`}
             >
               <option value="2026">FY 2026 (Apr 2026 – Mar 2027)</option>
               <option value="2027">FY 2027 (Apr 2027 – Mar 2028)</option>
               <option value="2028">FY 2028 (Apr 2028 – Mar 2029)</option>
             </select>
-            <span className={`hidden md:inline-flex items-center px-2 py-1 rounded-lg text-[11px] font-bold border ${
+            <span className={`hidden xl:inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold border ${
               darkMode
                 ? 'bg-red-950/40 border-red-900/60 text-red-300'
                 : 'bg-red-50 border-red-200 text-red-700'
             }`}>
-              Siklus: Apr – Mar (+1)
+              Apr – Mar (+1)
             </span>
           </div>
 
-          <div className={`hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-bold ${
+          <div className={`hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold ${
             darkMode
               ? 'bg-slate-800/50 border-slate-700/60 text-slate-300'
-              : 'bg-white border-slate-300 text-slate-800 shadow-xs'
+              : 'bg-slate-50 border-slate-200 text-slate-700 shadow-2xs'
           }`}>
-            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Live Data Sync: <b className="text-emerald-600 dark:text-emerald-400">Active</b></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Sync: <b className="text-emerald-600 dark:text-emerald-400">Aktif</b></span>
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2.5">
+        {/* Right: Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
           <button
             onClick={onManualRefresh}
-            className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer relative ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer relative ${
               darkMode
                 ? 'border-slate-700 hover:bg-slate-800 text-slate-200'
-                : 'border-slate-300 bg-white hover:bg-slate-100 text-slate-800 shadow-xs'
+                : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs'
             }`}
             title="Refresh & Sinkronisasi (Ctrl+S)"
           >
             <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
             <span>Refresh</span>
             {isAltPressed && (
-              <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-1 animate-bounce">
+              <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
                 Ctrl+S
               </span>
             )}
@@ -677,7 +682,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={() => exportCSV(budget, forecast, realization)}
-            className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-sm hover:shadow-md transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xs transition-all cursor-pointer"
           >
             <FileSpreadsheet className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -686,7 +691,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {onOpenBulkUpload && (
             <button
               onClick={onOpenBulkUpload}
-              className={`flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-xs relative ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-2xs relative ${
                 darkMode
                   ? 'border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/50'
                   : 'border-indigo-200 bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100'
@@ -694,9 +699,9 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
               title="Bulk upload data finansial via CSV (Ctrl+U)"
             >
               <Upload className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>Bulk Upload CSV</span>
+              <span>Bulk Upload</span>
               {isAltPressed && (
-                <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-1 animate-bounce">
+                <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
                   Ctrl+U
                 </span>
               )}
@@ -705,13 +710,13 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
           <button
             onClick={() => setShowPdfModal(true)}
-            className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white shadow-md shadow-red-600/25 hover:shadow-red-600/40 transition-all cursor-pointer relative"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white shadow-xs shadow-red-600/20 hover:shadow-red-600/30 transition-all cursor-pointer relative"
             title="Generate Executive PDF Report (Ctrl+P)"
           >
             <FileDown className="w-3.5 h-3.5" />
-            <span>Executive PDF Report</span>
+            <span>Executive PDF</span>
             {isAltPressed && (
-              <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-1 animate-bounce">
+              <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
                 Ctrl+P
               </span>
             )}
@@ -720,13 +725,17 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           {onGoToExecutiveReport && (
             <button
               onClick={onGoToExecutiveReport}
-              className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-slate-900 dark:bg-slate-800 hover:bg-slate-800 dark:hover:bg-slate-700 text-white shadow-sm hover:shadow-md transition-all cursor-pointer border border-slate-700/50 relative"
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer relative ${
+                darkMode
+                  ? 'bg-slate-800/90 border-slate-700 hover:bg-slate-800 text-amber-300'
+                  : 'bg-white border-slate-300 hover:bg-slate-50 text-slate-800 shadow-2xs'
+              }`}
               title="Buka Laporan Strategis Top Management (Alt+2)"
             >
-              <Award className="w-3.5 h-3.5 text-amber-400" />
-              <span>Top Management Report</span>
+              <Award className="w-3.5 h-3.5 text-amber-500" />
+              <span className="hidden sm:inline">Top Management</span>
               {isAltPressed && (
-                <span className="px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-1 animate-bounce">
+                <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
                   Alt+2
                 </span>
               )}
