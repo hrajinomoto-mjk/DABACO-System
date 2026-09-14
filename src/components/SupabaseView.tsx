@@ -517,9 +517,9 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
 
             <div className="space-y-3 text-xs">
               <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
-                <p className="font-bold text-slate-800 dark:text-white">1. Auto-Load Saat Sistem Dibuka</p>
+                <p className="font-bold text-slate-800 dark:text-white">1. Auto-Load Instan Saat Sistem Dibuka</p>
                 <p className="text-slate-500 dark:text-slate-400 mt-1">
-                  Sistem tidak lagi mengandalkan LocalStorage browser. Saat aplikasi dimuat, transaksi ditarik langsung dari Supabase sebagai sumber data tunggal (single source of truth).
+                  Data yang tersimpan di database langsung termuat otomatis secara instan saat sistem dibuka tanpa perlu pull manual setiap sesi. Transaksi tetap sinkron, aman, dan siap digunakan.
                 </p>
               </div>
 

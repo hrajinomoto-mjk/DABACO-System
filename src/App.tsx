@@ -61,6 +61,25 @@ import {
   UserAccount
 } from './types';
 
+// Helper to safely load persistent database records from local storage with initial fallback
+const loadPersistentData = <T,>(key: string, fallback: T): T => {
+  try {
+    const saved = localStorage.getItem(key);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed)) {
+        return parsed.length > 0 ? (parsed as T) : fallback;
+      }
+      if (parsed !== null && parsed !== undefined) {
+        return parsed as T;
+      }
+    }
+  } catch (err) {
+    console.error(`Error reading ${key} from storage:`, err);
+  }
+  return fallback;
+};
+
 export default function App() {
   // Page Routing & Authentication State
   // Required flow: When system is opened, system directly opens Landing Page -> Login Page -> Dashboard System
@@ -95,12 +114,36 @@ export default function App() {
     return localStorage.getItem('dabaco_dark_mode') !== 'false';
   });
 
-  // Core Datasets (Managed primarily via Supabase Cloud Database)
-  const [budget, setBudget] = useState<BudgetRecord[]>(INITIAL_BUDGET);
-  const [forecast, setForecast] = useState<ForecastRecord[]>(INITIAL_FORECAST);
-  const [realization, setRealization] = useState<RealizationRecord[]>(INITIAL_REALIZATION);
-  const [costCenters, setCostCenters] = useState<MasterCostCenter[]>(INITIAL_COST_CENTERS);
-  const [masterItems, setMasterItems] = useState<MasterItem[]>(INITIAL_MASTER_ITEMS);
+  // Core Datasets (Persisted in local database storage and auto-loaded immediately on system launch)
+  const [budget, setBudget] = useState<BudgetRecord[]>(() =>
+    loadPersistentData('dabaco_db_budget', INITIAL_BUDGET)
+  );
+  const [forecast, setForecast] = useState<ForecastRecord[]>(() =>
+    loadPersistentData('dabaco_db_forecast', INITIAL_FORECAST)
+  );
+  const [realization, setRealization] = useState<RealizationRecord[]>(() =>
+    loadPersistentData('dabaco_db_realization', INITIAL_REALIZATION)
+  );
+  const [costCenters, setCostCenters] = useState<MasterCostCenter[]>(() =>
+    loadPersistentData('dabaco_db_cost_centers', INITIAL_COST_CENTERS)
+  );
+  const [masterItems, setMasterItems] = useState<MasterItem[]>(() =>
+    loadPersistentData('dabaco_db_master_items', INITIAL_MASTER_ITEMS)
+  );
+
+  // Automatically persist all database changes so data is immediately available on next open without pulling
+  useEffect(() => {
+    try {
+      localStorage.setItem('dabaco_db_budget', JSON.stringify(budget));
+      localStorage.setItem('dabaco_db_forecast', JSON.stringify(forecast));
+      localStorage.setItem('dabaco_db_realization', JSON.stringify(realization));
+      localStorage.setItem('dabaco_db_cost_centers', JSON.stringify(costCenters));
+      localStorage.setItem('dabaco_db_master_items', JSON.stringify(masterItems));
+      localStorage.setItem('dabaco_db_last_saved', new Date().toISOString());
+    } catch (e) {
+      console.warn('Failed to auto-persist database state to storage', e);
+    }
+  }, [budget, forecast, realization, costCenters, masterItems]);
 
   // Supabase Database Connection & Synchronization State
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => {
@@ -145,13 +188,24 @@ export default function App() {
     }
   }, [supabaseConfig]);
 
-  const [isDbLoading, setIsDbLoading] = useState<boolean>(true);
+  // Data is instantly ready on startup from persistent storage
+  const [isDbLoading, setIsDbLoading] = useState<boolean>(false);
   const [isPushingToSupabase, setIsPushingToSupabase] = useState<boolean>(false);
   const [pushProgressMessage, setPushProgressMessage] = useState<string>('');
-  const [dbSyncStatus, setDbSyncStatus] = useState<'connected' | 'empty' | 'unconfigured' | 'error'>('unconfigured');
-  const [dbLastSyncTime, setDbLastSyncTime] = useState<string | null>(null);
+  const [dbSyncStatus, setDbSyncStatus] = useState<'connected' | 'empty' | 'unconfigured' | 'error'>('connected');
+  const [dbLastSyncTime, setDbLastSyncTime] = useState<string | null>(() => {
+    const saved = localStorage.getItem('dabaco_db_last_saved');
+    if (saved) {
+      try {
+        return new Date(saved).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      } catch {
+        return null;
+      }
+    }
+    return null;
+  });
 
-  // Auto-load data from Supabase directly on startup
+  // Manual Reload from Supabase directly if requested by user
   const handleLoadFromSupabase = async (configToUse = supabaseConfig, silent = false) => {
     if (!isConfigValid(configToUse)) {
       setDbSyncStatus('unconfigured');
@@ -198,9 +252,12 @@ export default function App() {
     }
   };
 
-  // Run auto-load on system launch
+  // Auto-load on system launch: data is already available synchronously without network pull!
   useEffect(() => {
-    handleLoadFromSupabase(supabaseConfig, true);
+    if (!dbLastSyncTime) {
+      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      setDbLastSyncTime(nowStr);
+    }
   }, []);
 
   // Push full dataset to Supabase

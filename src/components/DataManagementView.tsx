@@ -280,11 +280,11 @@ export const DataManagementView: React.FC<DataManagementViewProps> = ({
                   Database Supabase Cloud Live
                 </span>
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  • Auto-Load Aktif (Bebas LocalStorage)
+                  • Auto-Load Aktif (Instant On-Start)
                 </span>
               </div>
               <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 leading-relaxed">
-                Data dimuat langsung dari Supabase setiap kali sistem dibuka. Gunakan tombol <strong>&quot;Push ke Supabase&quot;</strong> untuk memperbarui cloud database.
+                Data database otomatis termuat setiap kali sistem dibuka tanpa perlu pull manual. Gunakan tombol <strong>&quot;Push ke Supabase&quot;</strong> untuk sinkronisasi ke cloud database.
               </p>
             </div>
           </div>
