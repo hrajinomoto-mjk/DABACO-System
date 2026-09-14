@@ -264,33 +264,178 @@ export async function pushDatabaseToSupabase(
   }
 
   try {
-    // 1. Prepare cost centers (ensure all cost centers used in budget/forecast/realization exist)
+    // 1. Prepare cost centers with intelligent lookup and length safety (max 32 chars for VARCHAR(32) compatibility)
     onProgress?.('Menyiapkan Master Cost Center...');
-    const costCenterMap = new Map<string, MasterCostCenter>();
-    data.costCenters.forEach(cc => costCenterMap.set(cc.code, cc));
+    const codeLookup = new Map<string, string>(); // identifier -> safeCode
+    const resolvedCostCenterMap = new Map<string, MasterCostCenter>();
 
-    // Auto-create missing cost centers referenced in records
-    const allCostCenterCodes = new Set([
-      ...data.budget.map(b => b.costCenter),
-      ...data.forecast.map(f => f.costCenter),
-      ...data.realization.map(r => r.costCenter)
-    ]);
-    allCostCenterCodes.forEach(code => {
-      if (code && !costCenterMap.has(code)) {
-        costCenterMap.set(code, {
-          code,
-          name: `Cost Center ${code}`,
+    // Register known master cost centers first
+    data.costCenters.forEach(cc => {
+      const rawCode = (cc.code || '').trim();
+      const safeCode = (rawCode.length > 32 ? rawCode.slice(0, 32) : rawCode) || 'CC001';
+      const safeName = (cc.name || safeCode).trim().slice(0, 128);
+      const safeDept = (cc.department || 'HR & GA Department').trim().slice(0, 64);
+      const safeHead = cc.headOfDept ? cc.headOfDept.trim().slice(0, 128) : null;
+
+      codeLookup.set(rawCode.toLowerCase(), safeCode);
+      if (cc.name) codeLookup.set(cc.name.trim().toLowerCase(), safeCode);
+
+      resolvedCostCenterMap.set(safeCode, {
+        code: safeCode,
+        name: safeName,
+        department: safeDept,
+        headOfDept: safeHead || undefined
+      });
+    });
+
+    // Helper to resolve any cost center string into a valid <= 32 char code
+    const resolveSafeCostCenter = (rawCC: string): string => {
+      if (!rawCC || !rawCC.trim()) return 'HR001';
+      const trimmed = rawCC.trim();
+      const lower = trimmed.toLowerCase();
+
+      // Check direct match
+      if (codeLookup.has(lower)) {
+        return codeLookup.get(lower)!;
+      }
+
+      // Check partial name or code match
+      for (const [knownKey, targetCode] of codeLookup.entries()) {
+        if (knownKey.length >= 4 && (lower.includes(knownKey) || knownKey.includes(lower))) {
+          codeLookup.set(lower, targetCode);
+          return targetCode;
+        }
+      }
+
+      // If code is within 32 chars, use it directly
+      if (trimmed.length <= 32) {
+        codeLookup.set(lower, trimmed);
+        if (!resolvedCostCenterMap.has(trimmed)) {
+          resolvedCostCenterMap.set(trimmed, {
+            code: trimmed,
+            name: `Cost Center ${trimmed}`.slice(0, 128),
+            department: 'HR & GA Department',
+            headOfDept: 'Manager'
+          });
+        }
+        return trimmed;
+      }
+
+      // If code exceeds 32 characters (e.g. descriptive department name from CSV):
+      // Generate a deterministic safe slug <= 32 chars
+      let hash = 0;
+      for (let i = 0; i < trimmed.length; i++) {
+        hash = ((hash << 5) - hash) + trimmed.charCodeAt(i);
+        hash |= 0;
+      }
+      const hashStr = Math.abs(hash).toString(36).toUpperCase().slice(0, 5);
+      const words = trimmed.split(/[\s_\-/]+/).filter(Boolean);
+      const prefix = words.map(w => w[0].toUpperCase()).join('').slice(0, 6) || 'CC';
+      const safeSlug = `${prefix}-${trimmed.slice(0, 18).toUpperCase().replace(/[^A-Z0-9]/g, '')}-${hashStr}`.slice(0, 32);
+
+      codeLookup.set(lower, safeSlug);
+      if (!resolvedCostCenterMap.has(safeSlug)) {
+        resolvedCostCenterMap.set(safeSlug, {
+          code: safeSlug,
+          name: trimmed.slice(0, 128), // Keep full original descriptive text in name
           department: 'HR & GA Department',
           headOfDept: 'Manager'
         });
       }
+      return safeSlug;
+    };
+
+    // 2. Prepare master items with intelligent lookup (max 64 chars for VARCHAR(64) compatibility)
+    onProgress?.('Menyiapkan Master Items & Biaya...');
+    const itemLookup = new Map<string, string>();
+    const resolvedItemMap = new Map<string, MasterItem>();
+
+    data.masterItems.forEach(it => {
+      const rawCode = (it.code || '').trim();
+      const safeCode = (rawCode.length > 64 ? rawCode.slice(0, 64) : rawCode) || 'ITEM001';
+      const safeName = (it.name || safeCode).trim().slice(0, 255);
+      const safeCategory = (it.category || 'Operasional').trim().slice(0, 128);
+      const safeStatus = (it.status === 'Inactive' ? 'Inactive' : 'Active') as 'Active' | 'Inactive';
+
+      itemLookup.set(rawCode.toLowerCase(), safeCode);
+      if (it.name) itemLookup.set(it.name.trim().toLowerCase(), safeCode);
+
+      resolvedItemMap.set(safeCode, {
+        code: safeCode,
+        name: safeName,
+        category: safeCategory,
+        status: safeStatus
+      });
     });
 
-    const costCenterRows = Array.from(costCenterMap.values()).map(cc => ({
-      code: cc.code,
-      name: cc.name,
-      department: cc.department,
-      head_of_dept: cc.headOfDept || null
+    const resolveSafeItem = (rawItem: string): string => {
+      if (!rawItem || !rawItem.trim()) return 'HR001EDUCATIONFEETRAINING';
+      const trimmed = rawItem.trim();
+      const lower = trimmed.toLowerCase();
+
+      if (itemLookup.has(lower)) {
+        return itemLookup.get(lower)!;
+      }
+
+      for (const [knownKey, targetCode] of itemLookup.entries()) {
+        if (knownKey.length >= 5 && (lower.includes(knownKey) || knownKey.includes(lower))) {
+          itemLookup.set(lower, targetCode);
+          return targetCode;
+        }
+      }
+
+      const safeCode = trimmed.slice(0, 64);
+      itemLookup.set(lower, safeCode);
+      if (!resolvedItemMap.has(safeCode)) {
+        resolvedItemMap.set(safeCode, {
+          code: safeCode,
+          name: trimmed.slice(0, 255),
+          category: 'Operasional',
+          status: 'Active'
+        });
+      }
+      return safeCode;
+    };
+
+    // Helper for safe month string (max 8 characters, e.g. "Sep" instead of "September")
+    const resolveSafeMonth = (rawMonth: string): string => {
+      if (!rawMonth) return 'Jan';
+      const m = String(rawMonth).trim().toLowerCase();
+      if (m.startsWith('jan')) return 'Jan';
+      if (m.startsWith('feb')) return 'Feb';
+      if (m.startsWith('mar')) return 'Mar';
+      if (m.startsWith('apr')) return 'Apr';
+      if (m.startsWith('may') || m.startsWith('mei')) return 'May';
+      if (m.startsWith('jun')) return 'Jun';
+      if (m.startsWith('jul')) return 'Jul';
+      if (m.startsWith('aug') || m.startsWith('agu')) return 'Aug';
+      if (m.startsWith('sep')) return 'Sep';
+      if (m.startsWith('oct') || m.startsWith('okt')) return 'Oct';
+      if (m.startsWith('nov')) return 'Nov';
+      if (m.startsWith('dec') || m.startsWith('des')) return 'Dec';
+      return String(rawMonth).trim().slice(0, 8);
+    };
+
+    // Pre-resolve all foreign keys from dataset rows so missing master rows are created first
+    data.budget.forEach(b => {
+      resolveSafeCostCenter(b.costCenter);
+      resolveSafeItem(b.item);
+    });
+    data.forecast.forEach(f => {
+      resolveSafeCostCenter(f.costCenter);
+      resolveSafeItem(f.item);
+    });
+    data.realization.forEach(r => {
+      resolveSafeCostCenter(r.costCenter);
+      resolveSafeItem(r.item);
+    });
+
+    // Upload cost centers
+    const costCenterRows = Array.from(resolvedCostCenterMap.values()).map(cc => ({
+      code: cc.code.slice(0, 32),
+      name: cc.name.slice(0, 128),
+      department: cc.department.slice(0, 64),
+      head_of_dept: cc.headOfDept ? cc.headOfDept.slice(0, 128) : null
     }));
 
     if (costCenterRows.length > 0) {
@@ -300,31 +445,11 @@ export async function pushDatabaseToSupabase(
       if (ccErr) throw new Error(`Gagal push master_cost_center: ${ccErr.message}`);
     }
 
-    // 2. Prepare master items (ensure all items referenced exist)
-    onProgress?.('Menyiapkan Master Items & Biaya...');
-    const itemMap = new Map<string, MasterItem>();
-    data.masterItems.forEach(it => itemMap.set(it.code, it));
-
-    const allItemCodes = new Set([
-      ...data.budget.map(b => b.item),
-      ...data.forecast.map(f => f.item),
-      ...data.realization.map(r => r.item)
-    ]);
-    allItemCodes.forEach(code => {
-      if (code && !itemMap.has(code)) {
-        itemMap.set(code, {
-          code,
-          name: code,
-          category: 'Operasional',
-          status: 'Active'
-        });
-      }
-    });
-
-    const itemRows = Array.from(itemMap.values()).map(it => ({
-      code: it.code,
-      name: it.name,
-      category: it.category,
+    // Upload master items
+    const itemRows = Array.from(resolvedItemMap.values()).map(it => ({
+      code: it.code.slice(0, 64),
+      name: it.name.slice(0, 255),
+      category: it.category.slice(0, 128),
       status: it.status || 'Active'
     }));
 
@@ -339,11 +464,11 @@ export async function pushDatabaseToSupabase(
     onProgress?.('Mengunggah data Rencana Anggaran (Budget Plan)...');
     const budgetRows = data.budget.map(b => ({
       id: ensureUUID(b.id),
-      year: b.year,
-      month: b.month,
-      cost_center: b.costCenter,
-      item: b.item,
-      amount: b.amount
+      year: Number(b.year) || 2026,
+      month: resolveSafeMonth(b.month),
+      cost_center: resolveSafeCostCenter(b.costCenter),
+      item: resolveSafeItem(b.item),
+      amount: Number(b.amount) || 0
     }));
 
     if (budgetRows.length > 0) {
@@ -357,11 +482,11 @@ export async function pushDatabaseToSupabase(
     onProgress?.('Mengunggah data Proyeksi Anggaran (Forecast)...');
     const forecastRows = data.forecast.map(f => ({
       id: ensureUUID(f.id),
-      year: f.year,
-      month: f.month,
-      cost_center: f.costCenter,
-      item: f.item,
-      amount: f.amount
+      year: Number(f.year) || 2026,
+      month: resolveSafeMonth(f.month),
+      cost_center: resolveSafeCostCenter(f.costCenter),
+      item: resolveSafeItem(f.item),
+      amount: Number(f.amount) || 0
     }));
 
     if (forecastRows.length > 0) {
@@ -375,16 +500,16 @@ export async function pushDatabaseToSupabase(
     onProgress?.('Mengunggah data Realisasi Transaksi Kas...');
     const realizationRows = data.realization.map(r => ({
       id: ensureUUID(r.id),
-      tanggal: r.tanggal,
-      year: r.year,
-      month: r.month,
-      cost_center: r.costCenter,
-      item: r.item,
-      amount: r.amount,
-      keterangan: r.keterangan || '',
+      tanggal: (r.tanggal && r.tanggal.length >= 10) ? r.tanggal.slice(0, 10) : new Date().toISOString().slice(0, 10),
+      year: Number(r.year) || 2026,
+      month: resolveSafeMonth(r.month),
+      cost_center: resolveSafeCostCenter(r.costCenter),
+      item: resolveSafeItem(r.item),
+      amount: Number(r.amount) || 0,
+      keterangan: r.keterangan ? String(r.keterangan).trim() : '',
       encrypted_note: r.encryptedNote || null,
-      banking_reference: r.bankingReference || null,
-      reconciled: r.reconciled ?? false
+      banking_reference: r.bankingReference ? String(r.bankingReference).trim().slice(0, 64) : null,
+      reconciled: Boolean(r.reconciled)
     }));
 
     if (realizationRows.length > 0) {

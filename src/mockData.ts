@@ -401,10 +401,13 @@ export const INITIAL_LOOKER_CONFIG: LookerStudioConfig = {
   aspectRatio: '16:9'
 };
 
+const envSupabaseUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ? String(import.meta.env.VITE_SUPABASE_URL).trim() : '';
+const envSupabaseAnonKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ? String(import.meta.env.VITE_SUPABASE_ANON_KEY).trim() : '';
+
 export const INITIAL_SUPABASE_CONFIG: SupabaseConfig = {
-  projectUrl: '',
-  anonKey: '',
-  status: 'disconnected',
+  projectUrl: envSupabaseUrl,
+  anonKey: envSupabaseAnonKey,
+  status: envSupabaseUrl && envSupabaseAnonKey ? 'connected' : 'disconnected',
   tablesSynced: 0,
   lastBackupTime: null,
   encryptionActive: true

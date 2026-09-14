@@ -64,6 +64,32 @@ export const SupabaseView: React.FC<SupabaseViewProps> = ({
     setAnonKey(config.anonKey || '');
   }, [config.projectUrl, config.anonKey]);
 
+  const [copiedMigrationSql, setCopiedMigrationSql] = useState(false);
+
+  const migrationFixSql = `-- ========================================================
+-- QUICK FIX / MIGRATION SCRIPT UNTUK DATABASE YANG SUDAH ADA
+-- Jalankan ini di Supabase SQL Editor jika muncul error "value too long":
+-- ========================================================
+ALTER TABLE public.master_cost_center ALTER COLUMN code TYPE VARCHAR(128);
+ALTER TABLE public.master_cost_center ALTER COLUMN name TYPE VARCHAR(255);
+ALTER TABLE public.master_cost_center ALTER COLUMN department TYPE VARCHAR(128);
+
+ALTER TABLE public.master_items ALTER COLUMN code TYPE VARCHAR(128);
+ALTER TABLE public.master_items ALTER COLUMN name TYPE VARCHAR(255);
+
+ALTER TABLE public.budget_plan ALTER COLUMN cost_center TYPE VARCHAR(128);
+ALTER TABLE public.budget_plan ALTER COLUMN item TYPE VARCHAR(128);
+ALTER TABLE public.budget_plan ALTER COLUMN month TYPE VARCHAR(32);
+
+ALTER TABLE public.forecast ALTER COLUMN cost_center TYPE VARCHAR(128);
+ALTER TABLE public.forecast ALTER COLUMN item TYPE VARCHAR(128);
+ALTER TABLE public.forecast ALTER COLUMN month TYPE VARCHAR(32);
+
+ALTER TABLE public.realization ALTER COLUMN cost_center TYPE VARCHAR(128);
+ALTER TABLE public.realization ALTER COLUMN item TYPE VARCHAR(128);
+ALTER TABLE public.realization ALTER COLUMN month TYPE VARCHAR(32);
+ALTER TABLE public.realization ALTER COLUMN banking_reference TYPE VARCHAR(128);`;
+
   const supabaseSqlSchema = `-- ========================================================
 -- DABACO DATABASE SCHEMA & ENCRYPTION FOR SUPABASE
 -- Project: PT Ajinomoto Indonesia - PT Ajinex International, Mojokerto Factory
@@ -72,18 +98,18 @@ export const SupabaseView: React.FC<SupabaseViewProps> = ({
 -- 1. Enable pgcrypto extension for transparent database encryption
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- 2. Master Cost Center Table
+-- 2. Master Cost Center Table (Kapasitas kode diperluas hingga 128 karakter)
 CREATE TABLE IF NOT EXISTS public.master_cost_center (
-    code VARCHAR(32) PRIMARY KEY,
-    name VARCHAR(128) NOT NULL,
-    department VARCHAR(64) NOT NULL,
+    code VARCHAR(128) PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    department VARCHAR(128) NOT NULL,
     head_of_dept VARCHAR(128),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
 -- 3. Master Items Table
 CREATE TABLE IF NOT EXISTS public.master_items (
-    code VARCHAR(64) PRIMARY KEY,
+    code VARCHAR(128) PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     category VARCHAR(128) NOT NULL,
     status VARCHAR(16) DEFAULT 'Active' CHECK (status IN ('Active', 'Inactive')),
@@ -94,9 +120,9 @@ CREATE TABLE IF NOT EXISTS public.master_items (
 CREATE TABLE IF NOT EXISTS public.budget_plan (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     year INT NOT NULL,
-    month VARCHAR(8) NOT NULL,
-    cost_center VARCHAR(32) REFERENCES public.master_cost_center(code),
-    item VARCHAR(64) REFERENCES public.master_items(code),
+    month VARCHAR(32) NOT NULL,
+    cost_center VARCHAR(128) REFERENCES public.master_cost_center(code),
+    item VARCHAR(128) REFERENCES public.master_items(code),
     amount NUMERIC(18, 2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -105,9 +131,9 @@ CREATE TABLE IF NOT EXISTS public.budget_plan (
 CREATE TABLE IF NOT EXISTS public.forecast (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     year INT NOT NULL,
-    month VARCHAR(8) NOT NULL,
-    cost_center VARCHAR(32) REFERENCES public.master_cost_center(code),
-    item VARCHAR(64) REFERENCES public.master_items(code),
+    month VARCHAR(32) NOT NULL,
+    cost_center VARCHAR(128) REFERENCES public.master_cost_center(code),
+    item VARCHAR(128) REFERENCES public.master_items(code),
     amount NUMERIC(18, 2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -117,13 +143,13 @@ CREATE TABLE IF NOT EXISTS public.realization (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     tanggal DATE NOT NULL,
     year INT NOT NULL,
-    month VARCHAR(8) NOT NULL,
-    cost_center VARCHAR(32) REFERENCES public.master_cost_center(code),
-    item VARCHAR(64) REFERENCES public.master_items(code),
+    month VARCHAR(32) NOT NULL,
+    cost_center VARCHAR(128) REFERENCES public.master_cost_center(code),
+    item VARCHAR(128) REFERENCES public.master_items(code),
     amount NUMERIC(18, 2) NOT NULL DEFAULT 0,
     keterangan TEXT,
     encrypted_note TEXT, -- Encrypted AES-256 for confidential vendor / payroll remarks
-    banking_reference VARCHAR(64),
+    banking_reference VARCHAR(128),
     reconciled BOOLEAN DEFAULT false,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
@@ -216,6 +242,12 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
       });
     }
   };
+
+  const isEnvConfigured = Boolean(
+    typeof import.meta !== 'undefined' &&
+    import.meta.env?.VITE_SUPABASE_URL &&
+    import.meta.env?.VITE_SUPABASE_ANON_KEY
+  );
 
   return (
     <div className="space-y-6 pb-12">
@@ -411,6 +443,15 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
               </button>
             </div>
 
+            {isEnvConfigured && (
+              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2.5">
+                <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                <div>
+                  <span className="font-bold">Environment Variables Terdeteksi:</span> Kredensial aktif dimuat dari sistem environment (<code className="px-1 py-0.5 rounded bg-emerald-500/15 font-mono text-[10px]">VITE_SUPABASE_URL</code>).
+                </div>
+              </div>
+            )}
+
             <div className="space-y-3 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">Project URL</label>
@@ -502,6 +543,30 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
             </div>
           </div>
 
+          {/* Quick Migration Banner if already had tables created */}
+          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs space-y-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                <strong className="text-amber-800 dark:text-amber-300">Perbaikan Instan Jika Muncul Error &quot;value too long&quot;:</strong>
+              </div>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(migrationFixSql);
+                  setCopiedMigrationSql(true);
+                  setTimeout(() => setCopiedMigrationSql(false), 2000);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-[11px] shadow-sm transition"
+              >
+                {copiedMigrationSql ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                <span>{copiedMigrationSql ? 'Tersalin!' : 'Salin Skrip ALTER TABLE'}</span>
+              </button>
+            </div>
+            <p className="text-slate-600 dark:text-slate-400 leading-relaxed">
+              Jika sebelumnya Anda sudah pernah menjalankan SQL di Supabase dan menemui pesan <code className="bg-amber-200/50 dark:bg-amber-950/60 px-1 py-0.5 rounded text-amber-900 dark:text-amber-200">value too long for type character varying(32)</code> saat push data, jalankan skrip <strong className="text-amber-700 dark:text-amber-300">ALTER TABLE</strong> di Supabase SQL Editor untuk memperbesar batas karakter kolom tabel secara permanen.
+            </p>
+          </div>
+
           <div className="rounded-2xl bg-[#090d16] border border-slate-800 p-4 font-mono text-[11px] text-slate-300 max-h-[460px] overflow-y-auto scrollbar-thin">
             <pre>{supabaseSqlSchema}</pre>
           </div>
@@ -540,6 +605,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
               <h4 className="font-bold text-sm text-slate-900 dark:text-white mb-1">Langkah 3: Push & Auto-Load</h4>
               <p className="text-slate-600 dark:text-slate-300 leading-relaxed">
                 Klik tombol <strong>Push Data ke Supabase</strong> untuk mengunggah master data dan seluruh catatan transaksi. Setelah itu, setiap kali aplikasi dibuka, sistem akan otomatis membaca data langsung dari Supabase tanpa memerlukan penyimpanan lokal browser lagi.
+              </p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-emerald-500/5 dark:bg-emerald-950/20 border border-emerald-500/20">
+              <h4 className="font-bold text-sm text-emerald-800 dark:text-emerald-300 mb-1.5 flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-emerald-500" />
+                Langkah 4: Konfigurasi Auto-Load di Vercel (Production)
+              </h4>
+              <p className="text-slate-600 dark:text-slate-300 leading-relaxed mb-2">
+                Agar saat diakses melalui domain Vercel aplikasi langsung otomatis terhubung dan memuat data dari Supabase tanpa perlu mengisi form kredensial secara manual, tambahkan Environment Variables berikut di dashboard Vercel:
+              </p>
+              <div className="space-y-2 font-mono text-[11px] bg-slate-900 text-slate-200 p-3 rounded-xl border border-slate-800">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-1 border-b border-slate-800 gap-1">
+                  <span className="text-emerald-400 font-bold">VITE_SUPABASE_URL</span>
+                  <span className="text-slate-400">URL Supabase Anda (contoh: https://xyz.supabase.co)</span>
+                </div>
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-1 gap-1">
+                  <span className="text-emerald-400 font-bold">VITE_SUPABASE_ANON_KEY</span>
+                  <span className="text-slate-400">Public anon key (eyJhbGciOi...)</span>
+                </div>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
+                <strong>Cara setting:</strong> Buka Project Vercel &rarr; Settings &rarr; Environment Variables &rarr; Masukkan kedua variabel di atas &rarr; Klik Save &rarr; Lakukan <em>Redeploy</em>.
               </p>
             </div>
           </div>

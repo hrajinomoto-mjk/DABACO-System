@@ -102,6 +102,25 @@ export default function App() {
 
   // Supabase Database Connection & Synchronization State
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => {
+    // 1. Prioritize environment variables (Vercel / Production Deployment)
+    const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ? String(import.meta.env.VITE_SUPABASE_URL).trim() : '';
+    const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ? String(import.meta.env.VITE_SUPABASE_ANON_KEY).trim() : '';
+
+    if (envUrl && envKey) {
+      const candidate: SupabaseConfig = {
+        projectUrl: envUrl,
+        anonKey: envKey,
+        status: 'connected',
+        tablesSynced: 0,
+        lastBackupTime: null,
+        encryptionActive: true
+      };
+      if (isConfigValid(candidate)) {
+        return candidate;
+      }
+    }
+
+    // 2. Check saved manual configuration in localStorage
     const saved = localStorage.getItem('dabaco_supabase_config');
     if (saved) {
       try {
