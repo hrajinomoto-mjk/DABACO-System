@@ -28,7 +28,8 @@ import {
   Clock,
   ChevronRight,
   Info,
-  Lock
+  Lock,
+  SlidersHorizontal
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -590,157 +591,169 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35, ease: 'easeOut' }}
-        className={`flex flex-col lg:flex-row lg:items-center justify-between gap-3.5 p-3.5 sm:p-4 rounded-2xl border transition-all ${
+        className={`p-4 sm:p-5 rounded-2xl border transition-all space-y-3.5 ${
           darkMode
             ? 'bg-[#0b101d] border-slate-800/90 shadow-xs'
             : 'bg-white border-slate-200/90 shadow-xs'
         }`}
       >
-        {/* Left: Filter Controls */}
-        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
-          {/* Cost Center Filter */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold shrink-0 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-              Cost Center:
-            </span>
-            <select
-              id="dashboardCostCenterFilter"
-              value={selectedCostCenter}
-              onChange={(e) => setSelectedCostCenter(e.target.value)}
-              className={`px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
-                darkMode
-                  ? 'bg-slate-800/90 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500/40'
-                  : 'bg-slate-50 border-slate-300 text-slate-900 shadow-2xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-              }`}
-            >
-              <option value="ALL">Semua Cost Center (Consolidated)</option>
-              {costCenters.map(cc => (
-                <option key={cc.code} value={cc.code}>
-                  {cc.code} - {cc.name}
-                </option>
-              ))}
-            </select>
-          </div>
+        {/* Tier 1: Filter Controls (Cost Center, FY, Cycle Badge, Live Sync status) */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800/80">
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+            {/* Cost Center Filter */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="dashboardCostCenterFilter" className={`text-xs font-bold shrink-0 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Cost Center:
+              </label>
+              <select
+                id="dashboardCostCenterFilter"
+                value={selectedCostCenter}
+                onChange={(e) => setSelectedCostCenter(e.target.value)}
+                className={`px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
+                  darkMode
+                    ? 'bg-slate-800/90 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500/40'
+                    : 'bg-slate-50 border-slate-300 text-slate-900 shadow-2xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                }`}
+              >
+                <option value="ALL">Semua Cost Center (Consolidated)</option>
+                {costCenters.map(cc => (
+                  <option key={cc.code} value={cc.code}>
+                    {cc.code} - {cc.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* FY Filter */}
-          <div className="flex items-center gap-2">
-            <span className={`text-xs font-bold shrink-0 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
-              Fiscal Year:
-            </span>
-            <select
-              id="dashboardFYFilter"
-              value={selectedFY}
-              onChange={(e) => setSelectedFY(e.target.value)}
-              className={`px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
-                darkMode
-                  ? 'bg-slate-800/90 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500/40'
-                  : 'bg-slate-50 border-slate-300 text-slate-900 shadow-2xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
-              }`}
-            >
-              <option value="2026">FY 2026 (Apr 2026 – Mar 2027)</option>
-              <option value="2027">FY 2027 (Apr 2027 – Mar 2028)</option>
-              <option value="2028">FY 2028 (Apr 2028 – Mar 2029)</option>
-            </select>
-            <span className={`hidden xl:inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold border ${
+            {/* FY Filter */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="dashboardFYFilter" className={`text-xs font-bold shrink-0 ${darkMode ? 'text-slate-300' : 'text-slate-700'}`}>
+                Fiscal Year:
+              </label>
+              <select
+                id="dashboardFYFilter"
+                value={selectedFY}
+                onChange={(e) => setSelectedFY(e.target.value)}
+                className={`px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
+                  darkMode
+                    ? 'bg-slate-800/90 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500/40'
+                    : 'bg-slate-50 border-slate-300 text-slate-900 shadow-2xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
+                }`}
+              >
+                <option value="2026">FY 2026 (Apr 2026 – Mar 2027)</option>
+                <option value="2027">FY 2027 (Apr 2027 – Mar 2028)</option>
+                <option value="2028">FY 2028 (Apr 2028 – Mar 2029)</option>
+              </select>
+            </div>
+
+            {/* Siklus Badge */}
+            <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-[10px] font-bold border whitespace-nowrap ${
               darkMode
                 ? 'bg-red-950/40 border-red-900/60 text-red-300'
                 : 'bg-red-50 border-red-200 text-red-700'
             }`}>
-              Apr – Mar (+1)
+              Siklus: Apr – Mar (+1)
             </span>
           </div>
 
-          <div className={`hidden 2xl:flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-[11px] font-semibold ${
+          {/* Live Sync Status indicator */}
+          <div className={`hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold border shrink-0 ${
             darkMode
-              ? 'bg-slate-800/50 border-slate-700/60 text-slate-300'
+              ? 'bg-slate-800/60 border-slate-700/60 text-slate-300'
               : 'bg-slate-50 border-slate-200 text-slate-700 shadow-2xs'
           }`}>
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Sync: <b className="text-emerald-600 dark:text-emerald-400">Aktif</b></span>
+            <span>Status Data: <b className="text-emerald-600 dark:text-emerald-400">Tersinkronisasi</b></span>
           </div>
         </div>
 
-        {/* Right: Action Buttons */}
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
-          <button
-            onClick={onManualRefresh}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer relative ${
-              darkMode
-                ? 'border-slate-700 hover:bg-slate-800 text-slate-200'
-                : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs'
-            }`}
-            title="Refresh & Sinkronisasi (Ctrl+S)"
-          >
-            <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-            <span>Refresh</span>
-            {isAltPressed && (
-              <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
-                Ctrl+S
-              </span>
-            )}
-          </button>
+        {/* Tier 2: Dedicated Action Buttons Toolbar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
+          <div className={`text-xs font-bold flex items-center gap-1.5 ${darkMode ? 'text-slate-400' : 'text-slate-600'}`}>
+            <SlidersHorizontal className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
+            <span>Aksi Operasional & Pelaporan:</span>
+          </div>
 
-          <button
-            onClick={() => exportCSV(budget, forecast, realization)}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xs transition-all cursor-pointer"
-          >
-            <FileSpreadsheet className="w-3.5 h-3.5" />
-            <span>Export CSV</span>
-          </button>
-
-          {onOpenBulkUpload && (
+          <div className="flex flex-wrap items-center gap-2 sm:gap-2.5">
             <button
-              onClick={onOpenBulkUpload}
-              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-2xs relative ${
-                darkMode
-                  ? 'border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/50'
-                  : 'border-indigo-200 bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100'
-              }`}
-              title="Bulk upload data finansial via CSV (Ctrl+U)"
-            >
-              <Upload className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-              <span>Bulk Upload</span>
-              {isAltPressed && (
-                <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
-                  Ctrl+U
-                </span>
-              )}
-            </button>
-          )}
-
-          <button
-            onClick={() => setShowPdfModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white shadow-xs shadow-red-600/20 hover:shadow-red-600/30 transition-all cursor-pointer relative"
-            title="Generate Executive PDF Report (Ctrl+P)"
-          >
-            <FileDown className="w-3.5 h-3.5" />
-            <span>Executive PDF</span>
-            {isAltPressed && (
-              <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
-                Ctrl+P
-              </span>
-            )}
-          </button>
-
-          {onGoToExecutiveReport && (
-            <button
-              onClick={onGoToExecutiveReport}
+              onClick={onManualRefresh}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer relative ${
                 darkMode
-                  ? 'bg-slate-800/90 border-slate-700 hover:bg-slate-800 text-amber-300'
-                  : 'bg-white border-slate-300 hover:bg-slate-50 text-slate-800 shadow-2xs'
+                  ? 'border-slate-700 hover:bg-slate-800 text-slate-200'
+                  : 'border-slate-300 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs'
               }`}
-              title="Buka Laporan Strategis Top Management (Alt+2)"
+              title="Refresh & Sinkronisasi (Ctrl+S)"
             >
-              <Award className="w-3.5 h-3.5 text-amber-500" />
-              <span className="hidden sm:inline">Top Management</span>
+              <RefreshCw className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Refresh</span>
               {isAltPressed && (
                 <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
-                  Alt+2
+                  Ctrl+S
                 </span>
               )}
             </button>
-          )}
+
+            <button
+              onClick={() => exportCSV(budget, forecast, realization)}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xs transition-all cursor-pointer"
+            >
+              <FileSpreadsheet className="w-3.5 h-3.5" />
+              <span>Export CSV</span>
+            </button>
+
+            {onOpenBulkUpload && (
+              <button
+                onClick={onOpenBulkUpload}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer shadow-2xs relative ${
+                  darkMode
+                    ? 'border-indigo-500/40 bg-indigo-950/40 text-indigo-300 hover:bg-indigo-900/50'
+                    : 'border-indigo-200 bg-indigo-50/80 text-indigo-700 hover:bg-indigo-100'
+                }`}
+                title="Bulk upload data finansial via CSV (Ctrl+U)"
+              >
+                <Upload className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                <span>Bulk Upload</span>
+                {isAltPressed && (
+                  <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
+                    Ctrl+U
+                  </span>
+                )}
+              </button>
+            )}
+
+            <button
+              onClick={() => setShowPdfModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white shadow-xs shadow-red-600/20 hover:shadow-red-600/30 transition-all cursor-pointer relative"
+              title="Generate Executive PDF Report (Ctrl+P)"
+            >
+              <FileDown className="w-3.5 h-3.5" />
+              <span>Executive PDF</span>
+              {isAltPressed && (
+                <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
+                  Ctrl+P
+                </span>
+              )}
+            </button>
+
+            {onGoToExecutiveReport && (
+              <button
+                onClick={onGoToExecutiveReport}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer relative ${
+                  darkMode
+                    ? 'bg-slate-800/90 border-slate-700 hover:bg-slate-800 text-amber-300'
+                    : 'bg-white border-slate-300 hover:bg-slate-50 text-slate-800 shadow-2xs'
+                }`}
+                title="Buka Laporan Strategis Top Management (Alt+2)"
+              >
+                <Award className="w-3.5 h-3.5 text-amber-500" />
+                <span>Top Management Report</span>
+                {isAltPressed && (
+                  <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
+                    Alt+2
+                  </span>
+                )}
+              </button>
+            )}
+          </div>
         </div>
       </motion.div>
 

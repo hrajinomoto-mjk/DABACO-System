@@ -184,9 +184,9 @@ export const Navbar: React.FC<NavbarProps> = ({
       <div className="flex items-center justify-between gap-3 md:gap-4">
         
         {/* ========================================================= */}
-        {/* LEFT ZONE: Mobile Menu + Clean Breadcrumb & Page Title    */}
+        {/* LEFT ZONE: Mobile Menu + Single-Line Clean Title & Badge  */}
         {/* ========================================================= */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-3 min-w-0">
           {/* Mobile Toggle Button */}
           <button
             onClick={onToggleSidebar}
@@ -201,30 +201,23 @@ export const Navbar: React.FC<NavbarProps> = ({
           </button>
 
           {/* Context & Title Block */}
-          <div className="min-w-0">
-            {/* Top Context Breadcrumb */}
-            <div className="flex items-center gap-1.5 text-[10px] sm:text-[11px] font-semibold tracking-wide">
-              <span className="inline-flex items-center gap-1 font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-red-600/10 text-red-600 dark:text-red-400 border border-red-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                MOJOKERTO FACTORY
-              </span>
-              <span className="text-slate-400 dark:text-slate-600">/</span>
-              <span className={`truncate ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                {meta.category}
-              </span>
-            </div>
+          <div className="min-w-0 flex items-center gap-2 sm:gap-2.5">
+            <h1 className={`text-base sm:text-lg lg:text-xl font-black tracking-tight whitespace-nowrap ${
+              darkMode ? 'text-white' : 'text-slate-900'
+            }`}>
+              {meta.title}
+            </h1>
 
-            {/* Main Page Title + Optional Subtitle */}
-            <div className="flex items-baseline gap-2.5 mt-0.5">
-              <h1 className={`text-base sm:text-lg lg:text-xl font-extrabold tracking-tight truncate ${
-                darkMode ? 'text-white' : 'text-slate-900'
-              }`}>
-                {meta.title}
-              </h1>
-              <span className={`hidden xl:inline-block text-xs font-normal truncate ${
+            <div className="hidden md:flex items-center gap-1.5 shrink-0">
+              <span className="inline-flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 whitespace-nowrap">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                Mojokerto Factory
+              </span>
+              <span className="text-slate-300 dark:text-slate-700 font-normal">|</span>
+              <span className={`text-xs font-medium truncate max-w-[130px] lg:max-w-[200px] ${
                 darkMode ? 'text-slate-400' : 'text-slate-500'
               }`}>
-                &mdash; {meta.subtitle}
+                {meta.category}
               </span>
             </div>
           </div>
@@ -233,33 +226,16 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* ========================================================= */}
         {/* RIGHT ZONE: Structured Action Groups, Utilities & Profile */}
         {/* ========================================================= */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           
           {/* GROUP 1: Cloud & Data Sync Operations */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             
-            {/* Bulk CSV Upload Button */}
-            {onOpenBulkUpload && (
-              <button
-                onClick={onOpenBulkUpload}
-                className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border border-red-500/25 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 transition-all cursor-pointer shadow-2xs relative"
-                title="Bulk upload data finansial via CSV (Ctrl+U)"
-              >
-                <Upload className="w-3.5 h-3.5" />
-                <span className="hidden md:inline">Bulk CSV</span>
-                {isAltPressed && (
-                  <span className="px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-sm ml-0.5 animate-bounce">
-                    ^U
-                  </span>
-                )}
-              </button>
-            )}
-
             {/* Live Sync Status & Trigger Pill */}
             <button
               onClick={onQuickSync}
               disabled={isSyncing}
-              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer relative ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer whitespace-nowrap relative ${
                 isSyncing
                   ? 'bg-blue-500/10 border-blue-500/30 text-blue-500 cursor-wait'
                   : isAltPressed
@@ -270,8 +246,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
               title="Sinkronisasi data dengan Google Sheets & Database (Ctrl+S)"
             >
-              <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span className="hidden md:inline font-bold">
+              <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
+              <span className="font-bold">
                 {isSyncing ? 'Syncing...' : 'Live Synced'}
               </span>
               {isAltPressed && (
@@ -286,7 +262,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 onClick={onPushToSupabase}
                 disabled={isPushingSupabase}
-                className={`hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                className={`hidden md:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer whitespace-nowrap ${
                   isPushingSupabase
                     ? 'bg-indigo-500/20 border-indigo-500/40 text-indigo-400 cursor-wait'
                     : darkMode
@@ -295,7 +271,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
                 title="Push seluruh data budget, forecast, dan realisasi ke Supabase"
               >
-                <UploadCloud className={`w-3.5 h-3.5 text-emerald-500 ${isPushingSupabase ? 'animate-bounce' : ''}`} />
+                <UploadCloud className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isPushingSupabase ? 'animate-bounce' : ''}`} />
                 <span>{isPushingSupabase ? 'Pushing...' : 'Push DB'}</span>
               </button>
             )}
@@ -304,7 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             {onOpenSupabase && (
               <button
                 onClick={onOpenSupabase}
-                className={`hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer ${
+                className={`hidden 2xl:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-[11px] font-semibold border transition-all cursor-pointer whitespace-nowrap ${
                   dbSyncStatus === 'connected'
                     ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-500 hover:bg-emerald-500/20'
                     : dbSyncStatus === 'empty'
@@ -313,7 +289,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 }`}
                 title="Status Supabase Database. Klik untuk membuka konfigurasi Supabase."
               >
-                <Database className="w-3.5 h-3.5 text-emerald-500" />
+                <Database className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 <span>
                   {dbSyncStatus === 'connected' ? 'Cloud DB' : dbSyncStatus === 'empty' ? 'DB Kosong' : 'Database'}
                 </span>
