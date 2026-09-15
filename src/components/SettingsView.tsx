@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Settings,
   Key,
@@ -7,7 +7,6 @@ import {
   Moon,
   Sun,
   CheckCircle2,
-  RefreshCw,
   Plus,
   ShieldCheck,
   Search,
@@ -18,80 +17,128 @@ import {
   AlertTriangle,
   X,
   Check,
+  FolderSync,
+  Building2,
+  Sliders,
+  Calendar,
   Layers,
-  FolderSync
+  Activity,
+  FileSpreadsheet,
+  BarChart3,
+  Database,
+  Save
 } from 'lucide-react';
-import { MasterItem, MasterCostCenter } from '../types';
+import { MasterCostCenter, MasterItem, BudgetRecord, ForecastRecord, RealizationRecord } from '../types';
 import { createEncryptedBackup } from '../utils/encryption';
 
 interface SettingsViewProps {
   darkMode: boolean;
   setDarkMode: (dark: boolean) => void;
-  masterItems: MasterItem[];
-  onAddMasterItem: (item: MasterItem) => void;
-  onEditMasterItem?: (item: MasterItem) => void;
-  onDeleteMasterItem?: (code: string) => void;
-  onAutoSyncMasterData?: () => void;
   costCenters: MasterCostCenter[];
+  onAddCostCenter?: (cc: MasterCostCenter) => void;
+  onEditCostCenter?: (cc: MasterCostCenter) => void;
+  onDeleteCostCenter?: (code: string) => void;
+  onAutoSyncMasterData?: () => void;
+  masterItems?: MasterItem[];
   totalRecords: { budget: number; forecast: number; realization: number };
   dataset: { budget: unknown[]; forecast: unknown[]; realization: unknown[]; metadata: unknown };
+  budgetData?: BudgetRecord[];
+  forecastData?: ForecastRecord[];
+  realizationData?: RealizationRecord[];
+  // Backwards compatibility if passed
+  onAddMasterItem?: (item: MasterItem) => void;
+  onEditMasterItem?: (item: MasterItem) => void;
+  onDeleteMasterItem?: (code: string) => void;
 }
 
-const STANDARD_CATEGORIES = [
-  'Training & Development',
-  'IT & Digital Systems',
-  'Facility & Operations',
-  'Employee Welfare',
-  'Recruitment & Assessment',
-  'Legal & Compliance',
-  'General & Other'
-];
+export interface BudgetPolicyConfig {
+  fiscalYear: string;
+  fiscalCycle: string;
+  warningThreshold: number; // e.g. 85%
+  criticalThreshold: number; // e.g. 100%
+  currencyUnit: 'IDR' | 'JUTA' | 'MILIAR';
+  lockStatus: 'Open' | 'Audited' | 'Locked';
+  defaultPlant: string;
+  overbudgetAlert: boolean;
+}
+
+const DEFAULT_POLICY: BudgetPolicyConfig = {
+  fiscalYear: 'FY2024',
+  fiscalCycle: 'April - Maret (Standar Ajinomoto Group)',
+  warningThreshold: 85,
+  criticalThreshold: 100,
+  currencyUnit: 'IDR',
+  lockStatus: 'Open',
+  defaultPlant: 'Pabrik Mojokerto (PT AI & PT AX)',
+  overbudgetAlert: true
+};
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
   darkMode,
   setDarkMode,
-  masterItems,
-  onAddMasterItem,
-  onEditMasterItem,
-  onDeleteMasterItem,
-  onAutoSyncMasterData,
   costCenters,
+  onAddCostCenter,
+  onEditCostCenter,
+  onDeleteCostCenter,
+  onAutoSyncMasterData,
   totalRecords,
-  dataset
+  dataset,
+  budgetData = [],
+  forecastData = [],
+  realizationData = []
 }) => {
+  // Credentials state
   const [username, setUsername] = useState('admin');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [credSuccess, setCredSuccess] = useState(false);
   const [credError, setCredError] = useState('');
 
-  // Add Item state
-  const [showAddItem, setShowAddItem] = useState(false);
-  const [newItemCode, setNewItemCode] = useState('');
-  const [newItemName, setNewItemName] = useState('');
-  const [newItemCategory, setNewItemCategory] = useState('Training & Development');
-  const [customCategoryInput, setCustomCategoryInput] = useState('');
+  // Policy configuration state (Stored in localStorage)
+  const [policy, setPolicy] = useState<BudgetPolicyConfig>(() => {
+    const saved = localStorage.getItem('dabaco_budget_policy');
+    if (saved) {
+      try {
+        return { ...DEFAULT_POLICY, ...JSON.parse(saved) };
+      } catch (e) {
+        console.error('Failed to parse dabaco_budget_policy', e);
+      }
+    }
+    return DEFAULT_POLICY;
+  });
+  const [policySaved, setPolicySaved] = useState(false);
 
-  // Edit Item modal state
-  const [editingItem, setEditingItem] = useState<MasterItem | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editCategory, setEditCategory] = useState('');
-  const [editStatus, setEditStatus] = useState<'Active' | 'Inactive'>('Active');
+  // Cost Center management modal state
+  const [showAddCC, setShowAddCC] = useState(false);
+  const [newCCCode, setNewCCCode] = useState('');
+  const [newCCName, setNewCCName] = useState('');
+  const [newCCDept, setNewCCDept] = useState('');
+  const [newCCHead, setNewCCHead] = useState('');
 
-  // Delete Item modal state
-  const [deletingItem, setDeletingItem] = useState<MasterItem | null>(null);
+  const [editingCC, setEditingCC] = useState<MasterCostCenter | null>(null);
+  const [editCCName, setEditCCName] = useState('');
+  const [editCCDept, setEditCCDept] = useState('');
+  const [editCCHead, setEditCCHead] = useState('');
 
-  // Filter & Search states
+  const [deletingCC, setDeletingCC] = useState<MasterCostCenter | null>(null);
+
+  // Search and filter for Cost Centers
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('ALL');
+  const [selectedEntityFilter, setSelectedEntityFilter] = useState<'ALL' | 'PT_AI' | 'PT_AX'>('ALL');
 
-  // Backup state
+  // Backup & sync state
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [backupSuccess, setBackupSuccess] = useState(false);
-
-  // Sync state
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotice, setSyncNotice] = useState<string | null>(null);
+
+  // Save budget policy to localStorage
+  const handleSavePolicy = (e: React.FormEvent) => {
+    e.preventDefault();
+    localStorage.setItem('dabaco_budget_policy', JSON.stringify(policy));
+    setPolicySaved(true);
+    setTimeout(() => setPolicySaved(false), 3000);
+  };
 
   const handleUpdateCredentials = (e: React.FormEvent) => {
     e.preventDefault();
@@ -133,64 +180,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
   };
 
-  const handleSaveItem = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newItemCode.trim() || !newItemName.trim()) return;
-
-    const finalCategory = newItemCategory === 'CUSTOM'
-      ? (customCategoryInput.trim() || 'General & Other')
-      : newItemCategory;
-
-    onAddMasterItem({
-      code: newItemCode.trim(),
-      name: newItemName.trim(),
-      category: finalCategory,
-      status: 'Active'
-    });
-
-    setNewItemCode('');
-    setNewItemName('');
-    setCustomCategoryInput('');
-    setShowAddItem(false);
-  };
-
-  const handleOpenEdit = (item: MasterItem) => {
-    setEditingItem(item);
-    setEditName(item.name || item.code);
-    setEditCategory(item.category || 'General & Other');
-    setEditStatus(item.status || 'Active');
-  };
-
-  const handleSaveEdit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingItem) return;
-
-    if (onEditMasterItem) {
-      onEditMasterItem({
-        ...editingItem,
-        name: editName.trim(),
-        category: editCategory.trim(),
-        status: editStatus
-      });
-    } else {
-      onAddMasterItem({
-        ...editingItem,
-        name: editName.trim(),
-        category: editCategory.trim(),
-        status: editStatus
-      });
-    }
-    setEditingItem(null);
-  };
-
-  const handleConfirmDelete = () => {
-    if (!deletingItem) return;
-    if (onDeleteMasterItem) {
-      onDeleteMasterItem(deletingItem.code);
-    }
-    setDeletingItem(null);
-  };
-
   const handleTriggerAutoSync = () => {
     setIsSyncing(true);
     if (onAutoSyncMasterData) {
@@ -198,78 +187,127 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
     }
     setTimeout(() => {
       setIsSyncing(false);
-      setSyncNotice(`Sinkronisasi berhasil! Master Item & Kategori otomatis disesuaikan dari seluruh ${totalRecords.budget + totalRecords.forecast + totalRecords.realization} data upload.`);
+      setSyncNotice(`Sinkronisasi berhasil! Master Cost Center otomatis disesuaikan dari seluruh ${totalRecords.budget + totalRecords.forecast + totalRecords.realization} data upload.`);
       setTimeout(() => setSyncNotice(null), 4000);
     }, 600);
   };
 
-  // Available unique categories from masterItems
-  const uniqueCategories = useMemo(() => {
-    const set = new Set<string>();
-    masterItems.forEach(i => {
-      if (i.category) set.add(i.category);
-    });
-    STANDARD_CATEGORIES.forEach(c => set.add(c));
-    return Array.from(set).sort();
-  }, [masterItems]);
+  // Add Cost Center
+  const handleSaveCC = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newCCCode.trim()) return;
 
-  // Filtered master items
-  const filteredMasterItems = useMemo(() => {
-    return masterItems.filter(item => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchSearch = !q ||
-        item.code.toLowerCase().includes(q) ||
-        (item.name && item.name.toLowerCase().includes(q)) ||
-        (item.category && item.category.toLowerCase().includes(q));
-
-      const matchCategory = selectedCategoryFilter === 'ALL' || item.category === selectedCategoryFilter;
-
-      return matchSearch && matchCategory;
-    });
-  }, [masterItems, searchQuery, selectedCategoryFilter]);
-
-  // Category badge style mapper
-  const getCategoryBadgeClass = (category: string) => {
-    switch (category) {
-      case 'Training & Development':
-        return 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-400 border-indigo-500/20';
-      case 'IT & Digital Systems':
-        return 'bg-cyan-500/10 text-cyan-700 dark:text-cyan-400 border-cyan-500/20';
-      case 'Facility & Operations':
-        return 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20';
-      case 'Employee Welfare':
-        return 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20';
-      case 'Recruitment & Assessment':
-        return 'bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/20';
-      case 'Legal & Compliance':
-        return 'bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/20';
-      default:
-        return 'bg-slate-500/10 text-slate-700 dark:text-slate-400 border-slate-500/20';
+    if (onAddCostCenter) {
+      onAddCostCenter({
+        code: newCCCode.trim(),
+        name: newCCName.trim() || newCCCode.trim(),
+        department: newCCDept.trim() || 'Human Resources',
+        headOfDept: newCCHead.trim() || '-'
+      });
     }
+
+    setNewCCCode('');
+    setNewCCName('');
+    setNewCCDept('');
+    setNewCCHead('');
+    setShowAddCC(false);
   };
+
+  // Edit Cost Center
+  const handleOpenEditCC = (cc: MasterCostCenter) => {
+    setEditingCC(cc);
+    setEditCCName(cc.name || cc.code);
+    setEditCCDept(cc.department || 'Human Resources');
+    setEditCCHead(cc.headOfDept || '');
+  };
+
+  const handleSaveEditCC = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCC) return;
+
+    if (onEditCostCenter) {
+      onEditCostCenter({
+        ...editingCC,
+        name: editCCName.trim(),
+        department: editCCDept.trim(),
+        headOfDept: editCCHead.trim()
+      });
+    }
+    setEditingCC(null);
+  };
+
+  // Delete Cost Center
+  const handleConfirmDeleteCC = () => {
+    if (!deletingCC) return;
+    if (onDeleteCostCenter) {
+      onDeleteCostCenter(deletingCC.code);
+    }
+    setDeletingCC(null);
+  };
+
+  // Calculate unique items count for each Cost Center across transaction tables
+  const costCenterUsageMap = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    const addToMap = (cc: string, item: string) => {
+      if (!cc || !item) return;
+      const key = cc.trim();
+      if (!map.has(key)) map.set(key, new Set());
+      map.get(key)!.add(item.trim());
+    };
+
+    budgetData.forEach(b => addToMap(b.costCenter, b.item));
+    forecastData.forEach(f => addToMap(f.costCenter, f.item));
+    realizationData.forEach(r => addToMap(r.costCenter, r.item));
+
+    return map;
+  }, [budgetData, forecastData, realizationData]);
+
+  // Filtered cost centers
+  const filteredCostCenters = useMemo(() => {
+    return costCenters.filter(cc => {
+      const q = searchQuery.toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        cc.code.toLowerCase().includes(q) ||
+        (cc.name && cc.name.toLowerCase().includes(q)) ||
+        (cc.department && cc.department.toLowerCase().includes(q)) ||
+        (cc.headOfDept && cc.headOfDept.toLowerCase().includes(q));
+
+      let matchEntity = true;
+      if (selectedEntityFilter === 'PT_AX') {
+        matchEntity = cc.code.toUpperCase().includes('HRX') || cc.department.toLowerCase().includes('ajinex');
+      } else if (selectedEntityFilter === 'PT_AI') {
+        matchEntity = !cc.code.toUpperCase().includes('HRX') && !cc.department.toLowerCase().includes('ajinex');
+      }
+
+      return matchSearch && matchEntity;
+    });
+  }, [costCenters, searchQuery, selectedEntityFilter]);
 
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
       <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2">
-            <span className="p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 rounded-xl bg-red-600/10 text-red-600 dark:text-red-400">
               <Settings className="w-5 h-5" />
             </span>
-            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-              Pengaturan Sistem & Master Data
-            </h2>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
+                Pengaturan Sistem & Kebijakan Anggaran
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Konfigurasi parameter fiskal Ajinomoto, master cost center pabrik riil, enkripsi data, dan integritas sistem.
+              </p>
+            </div>
           </div>
-          <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Manajemen Master Item & Kategori Anggaran otomatis dari data upload, enkripsi login, dan backup data.
-          </p>
         </div>
 
         <div className="flex items-center gap-3 self-start md:self-center">
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
             <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
@@ -277,22 +315,171 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* MASTER ITEM MANAGEMENT SECTION */}
+      {/* ========================================================= */}
+      {/* SECTION 1: KEBIJAKAN ANGGARAN & SIKLUS FISKAL KORPORAT     */}
+      {/* ========================================================= */}
+      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-red-600 to-rose-600 text-white flex items-center justify-center shadow-md shadow-red-600/20 shrink-0">
+              <Sliders className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
+                Kebijakan Anggaran & Siklus Fiskal Ajinomoto
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Standar tahun anggaran, siklus kalender April - Maret, dan batas peringatan dini (Early Warning).
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Kebijakan Aktif
+            </span>
+          </div>
+        </div>
+
+        {policySaved && (
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 text-xs flex items-center gap-2 animate-in fade-in">
+            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+            <span className="font-semibold">Konfigurasi kebijakan anggaran berhasil disimpan dan diperbarui di seluruh modul sistem!</span>
+          </div>
+        )}
+
+        <form onSubmit={handleSavePolicy} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-xs">
+          {/* Fiscal Year */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+            <div className="flex items-center justify-between text-slate-700 dark:text-slate-300 font-bold">
+              <span className="flex items-center gap-1.5">
+                <Calendar className="w-4 h-4 text-red-600" />
+                Tahun Fiskal Aktif
+              </span>
+            </div>
+            <select
+              value={policy.fiscalYear}
+              onChange={(e) => setPolicy({ ...policy, fiscalYear: e.target.value })}
+              className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+            >
+              <option value="FY2024">FY2024 (Apr 2024 - Mar 2025)</option>
+              <option value="FY2025">FY2025 (Apr 2025 - Mar 2026)</option>
+              <option value="FY2026">FY2026 (Apr 2026 - Mar 2027)</option>
+            </select>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Siklus: <strong>{policy.fiscalCycle}</strong>
+            </p>
+          </div>
+
+          {/* Warning Threshold */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+            <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300">
+              <span className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400">
+                <AlertTriangle className="w-4 h-4" />
+                Level Waspada (Warning)
+              </span>
+              <span className="font-mono text-amber-600 dark:text-amber-400 font-extrabold">{policy.warningThreshold}%</span>
+            </div>
+            <input
+              type="range"
+              min="50"
+              max="95"
+              step="5"
+              value={policy.warningThreshold}
+              onChange={(e) => setPolicy({ ...policy, warningThreshold: Number(e.target.value) })}
+              className="w-full accent-amber-500 cursor-pointer"
+            />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Tanda peringatan kuning saat serapan mencapai ambang ini.
+            </p>
+          </div>
+
+          {/* Critical Threshold */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+            <div className="flex items-center justify-between font-bold text-slate-700 dark:text-slate-300">
+              <span className="flex items-center gap-1.5 text-rose-600 dark:text-rose-400">
+                <ShieldCheck className="w-4 h-4" />
+                Level Kritis (Overbudget)
+              </span>
+              <span className="font-mono text-rose-600 dark:text-rose-400 font-extrabold">{policy.criticalThreshold}%</span>
+            </div>
+            <input
+              type="range"
+              min="90"
+              max="120"
+              step="5"
+              value={policy.criticalThreshold}
+              onChange={(e) => setPolicy({ ...policy, criticalThreshold: Number(e.target.value) })}
+              className="w-full accent-rose-600 cursor-pointer"
+            />
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Peringatan merah saat serapan melampaui alokasi pagu.
+            </p>
+          </div>
+
+          {/* Lock Status */}
+          <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 space-y-2">
+            <div className="flex items-center justify-between text-slate-700 dark:text-slate-300 font-bold">
+              <span className="flex items-center gap-1.5">
+                <Lock className="w-4 h-4 text-blue-600" />
+                Status Revisi Anggaran
+              </span>
+            </div>
+            <select
+              value={policy.lockStatus}
+              onChange={(e) => setPolicy({ ...policy, lockStatus: e.target.value as any })}
+              className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-bold"
+            >
+              <option value="Open">Terbuka (Revisi & Input Aktif)</option>
+              <option value="Audited">Proses Audit (Read-Only Warning)</option>
+              <option value="Locked">Terkunci Resmi (Final Pagu)</option>
+            </select>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              Unit: <strong>Pabrik Mojokerto</strong>
+            </p>
+          </div>
+
+          {/* Submit Button */}
+          <div className="md:col-span-2 lg:col-span-4 flex items-center justify-between pt-2">
+            <span className="text-[11px] text-slate-500 dark:text-slate-400">
+              Kebijakan ini menjadi acuan kalkulasi visualisasi KPI, alert overbudget, dan ekspor analitik Looker Studio.
+            </span>
+            <button
+              type="submit"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-md shadow-red-600/25 transition-all cursor-pointer"
+            >
+              <Save className="w-4 h-4" />
+              <span>Simpan Parameter Kebijakan</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* ========================================================= */}
+      {/* SECTION 2: MASTER COST CENTER PABRIK MOJOKERTO RIIL       */}
+      {/* ========================================================= */}
       <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white flex items-center gap-2">
-                <Layers className="w-5 h-5 text-red-600" />
-                Master Item & Kategori Anggaran
-              </h3>
-              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                {masterItems.length} Item Terdaftar
+            <div className="flex items-center gap-2.5">
+              <span className="p-2 rounded-xl bg-red-600/10 text-red-600 dark:text-red-400">
+                <Building2 className="w-5 h-5" />
               </span>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
+                    Master Cost Center Pabrik Mojokerto
+                  </h3>
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                    {costCenters.length} Pusat Biaya
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Daftar resmi Pusat Biaya operasional PT Ajinomoto Indonesia & PT Ajinex International (Pabrik Mojokerto). Digunakan sebagai pemetaan pagu anggaran dan serapan kas riil.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              Katalog standar akun biaya PT Ajinomoto Indonesia. Sistem secara otomatis mendeteksi dan menyesuaikan kategori dari file data upload (CSV/Excel), serta mendukung penambahan manual dan penghapusan item.
-            </p>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
@@ -300,18 +487,18 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               onClick={handleTriggerAutoSync}
               disabled={isSyncing}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-all cursor-pointer disabled:opacity-50"
-              title="Periksa semua data upload dan daftarkan item baru secara otomatis"
+              title="Periksa seluruh data upload dan daftarkan cost center baru secara otomatis"
             >
               <FolderSync className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
               <span>{isSyncing ? 'Menyelaraskan...' : 'Sinkronisasi Otomatis'}</span>
             </button>
 
             <button
-              onClick={() => setShowAddItem(!showAddItem)}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+              onClick={() => setShowAddCC(!showAddCC)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" />
-              <span>Tambah Item Baru</span>
+              <span>Tambah Cost Center</span>
             </button>
           </div>
         </div>
@@ -329,120 +516,114 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         )}
 
-        {/* Add Master Item Form */}
-        {showAddItem && (
-          <form onSubmit={handleSaveItem} className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 space-y-4 text-xs animate-in fade-in">
+        {/* Add Cost Center Form */}
+        {showAddCC && (
+          <form onSubmit={handleSaveCC} className="p-4 sm:p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 space-y-4 text-xs animate-in fade-in">
             <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
               <h4 className="font-bold text-sm text-slate-800 dark:text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-blue-500" />
-                Tambah Master Item Baru
+                <Plus className="w-4 h-4 text-red-500" />
+                Tambah Cost Center Baru
               </h4>
               <button
                 type="button"
-                onClick={() => setShowAddItem(false)}
+                onClick={() => setShowAddCC(false)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Kode Item (Contoh: HR001, English Training)
+                  Kode Cost Center (Contoh: HR001, HRX001)
                 </label>
                 <input
                   type="text"
-                  value={newItemCode}
-                  onChange={(e) => setNewItemCode(e.target.value)}
-                  placeholder="Contoh: HR001 atau English Training"
+                  placeholder="Kode unik CC"
+                  value={newCCCode}
+                  onChange={(e) => setNewCCCode(e.target.value)}
                   required
-                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white font-mono"
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Nama Deskripsi Item
+                  Nama Deskripsi Lengkap
                 </label>
                 <input
                   type="text"
-                  value={newItemName}
-                  onChange={(e) => setNewItemName(e.target.value)}
-                  placeholder="Contoh: English Training Program for Staff"
-                  required
-                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                  placeholder="Contoh: HR001 - Education Fee Training"
+                  value={newCCName}
+                  onChange={(e) => setNewCCName(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Kategori Anggaran
+                  Departemen / Bagian
                 </label>
-                <select
-                  value={newItemCategory}
-                  onChange={(e) => setNewItemCategory(e.target.value)}
-                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                >
-                  {STANDARD_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                  <option value="CUSTOM">+ Kategori Kustom Lainnya...</option>
-                </select>
+                <input
+                  type="text"
+                  placeholder="Contoh: Human Resources (Training & Dev)"
+                  value={newCCDept}
+                  onChange={(e) => setNewCCDept(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Kepala Bagian / PIC
+                </label>
+                <input
+                  type="text"
+                  placeholder="Contoh: S. Wardhana"
+                  value={newCCHead}
+                  onChange={(e) => setNewCCHead(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
+                />
               </div>
             </div>
-
-            {newItemCategory === 'CUSTOM' && (
-              <div className="animate-in fade-in">
-                <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Tuliskan Nama Kategori Kustom
-                </label>
-                <input
-                  type="text"
-                  value={customCategoryInput}
-                  onChange={(e) => setCustomCategoryInput(e.target.value)}
-                  placeholder="Contoh: Special Corporate Event"
-                  required
-                  className="w-full md:w-1/2 p-2.5 rounded-xl border border-blue-400 bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
-                />
-              </div>
-            )}
 
             <div className="flex justify-end gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setShowAddItem(false)}
-                className="px-3.5 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                onClick={() => setShowAddCC(false)}
+                className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 Batal
               </button>
               <button
                 type="submit"
-                className="px-4 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+                className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center gap-1.5 cursor-pointer"
               >
-                Simpan Master Item
+                <Check className="w-3.5 h-3.5" />
+                <span>Simpan Cost Center</span>
               </button>
             </div>
           </form>
         )}
 
-        {/* Filter and Search Bar */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
-          <div className="relative w-full sm:w-72">
-            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+        {/* Filter & Search Bar */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-1">
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
+              placeholder="Cari kode CC, nama, atau PIC..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Cari kode atau nama item..."
-              className="w-full pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full pl-9 pr-4 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/20"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </div>
@@ -450,106 +631,175 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div className="flex items-center gap-2 w-full sm:w-auto">
             <Filter className="w-3.5 h-3.5 text-slate-400" />
             <select
-              value={selectedCategoryFilter}
-              onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+              value={selectedEntityFilter}
+              onChange={(e) => setSelectedEntityFilter(e.target.value as any)}
               className="px-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-medium"
             >
-              <option value="ALL">Semua Kategori ({masterItems.length})</option>
-              {uniqueCategories.map(cat => {
-                const count = masterItems.filter(i => i.category === cat).length;
-                return (
-                  <option key={cat} value={cat}>
-                    {cat} ({count})
-                  </option>
-                );
-              })}
+              <option value="ALL">Semua Entitas ({costCenters.length})</option>
+              <option value="PT_AI">PT Ajinomoto Indonesia</option>
+              <option value="PT_AX">PT Ajinex International (HRX)</option>
             </select>
           </div>
         </div>
 
-        {/* Master Items Table */}
+        {/* Cost Centers Table */}
         <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800 scrollbar-thin">
-          <table className="w-full text-xs text-left min-w-[650px]">
+          <table className="w-full text-xs text-left min-w-[700px]">
             <thead className="bg-slate-50 dark:bg-slate-800/80">
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 text-[10px] uppercase font-bold tracking-wider">
-                <th className="py-3 px-4">Kode Item</th>
-                <th className="py-3 px-4">Nama Deskripsi Akun</th>
-                <th className="py-3 px-4">Kategori Anggaran</th>
-                <th className="py-3 px-4 text-center">Status</th>
+                <th className="py-3 px-4">Kode Cost Center</th>
+                <th className="py-3 px-4">Entitas Pabrik</th>
+                <th className="py-3 px-4">Departemen / Bagian</th>
+                <th className="py-3 px-4">Kepala Bagian (PIC)</th>
+                <th className="py-3 px-4 text-center">Pos Item Terhubung</th>
                 <th className="py-3 px-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
-              {filteredMasterItems.length === 0 ? (
+              {filteredCostCenters.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-400">
-                    Tidak ada master item yang cocok dengan pencarian / filter.
+                  <td colSpan={6} className="py-8 text-center text-slate-400">
+                    Tidak ada Cost Center yang cocok dengan pencarian / filter.
                   </td>
                 </tr>
               ) : (
-                filteredMasterItems.map((item) => (
-                  <tr key={item.code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
-                    <td className="py-3 px-4 font-mono font-bold text-blue-600 dark:text-blue-400">
-                      {item.code}
-                    </td>
-                    <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
-                      {item.name || item.code}
-                    </td>
-                    <td className="py-3 px-4">
-                      <span className={`inline-block px-2.5 py-1 rounded-lg text-[10px] font-bold border ${getCategoryBadgeClass(item.category)}`}>
-                        {item.category || 'General & Other'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        item.status === 'Inactive'
-                          ? 'bg-slate-500/10 text-slate-400'
-                          : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                      }`}>
-                        {item.status || 'Active'}
-                      </span>
-                    </td>
-                    <td className="py-3 px-4 text-center">
-                      <div className="flex items-center justify-center gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(item)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-slate-800 transition-colors"
-                          title="Edit Master Item"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button
-                          onClick={() => setDeletingItem(item)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors"
-                          title="Hapus Master Item"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filteredCostCenters.map((cc) => {
+                  const isAjinex = cc.code.toUpperCase().includes('HRX') || cc.department.toLowerCase().includes('ajinex');
+                  const usedItemCount = costCenterUsageMap.get(cc.code)?.size || 0;
+
+                  return (
+                    <tr key={cc.code} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
+                      <td className="py-3 px-4 font-mono font-bold text-red-600 dark:text-red-400">
+                        {cc.code}
+                      </td>
+                      <td className="py-3 px-4">
+                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold border ${
+                          isAjinex
+                            ? 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20'
+                            : 'bg-red-500/10 text-red-700 dark:text-red-400 border-red-500/20'
+                        }`}>
+                          <Building2 className="w-3 h-3" />
+                          {isAjinex ? 'PT Ajinex International' : 'PT Ajinomoto Indonesia'}
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 font-medium text-slate-800 dark:text-slate-200">
+                        {cc.department || 'Human Resources'}
+                      </td>
+                      <td className="py-3 px-4 font-semibold text-slate-700 dark:text-slate-300">
+                        {cc.headOfDept || '-'}
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                          {usedItemCount} Pos Anggaran
+                        </span>
+                      </td>
+                      <td className="py-3 px-4 text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditCC(cc)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Edit Cost Center"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => setDeletingCC(cc)}
+                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                            title="Hapus Cost Center"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
 
         <div className="flex items-center justify-between text-xs text-slate-400 px-1 pt-1">
-          <span>Menampilkan {filteredMasterItems.length} dari {masterItems.length} Master Item</span>
-          <span className="text-[11px]">Format kategori tersinkronisasi otomatis dengan Dashboard & Executive Report</span>
+          <span>Menampilkan {filteredCostCenters.length} dari {costCenters.length} Cost Center Pabrik</span>
+          <span className="text-[11px]">Format terhubung langsung dengan modul Budget Plan, Forecast, dan Realisasi</span>
         </div>
       </div>
 
-      {/* Two Column Grid: Credentials and Real-time Backup */}
+      {/* ========================================================= */}
+      {/* SECTION 3: STATUS INTEGRASI EKOSISTEM DABACO             */}
+      {/* ========================================================= */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Google Sheets Sync Status */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start gap-3.5">
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+            <FileSpreadsheet className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 uppercase">Google Sheets</span>
+            </div>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">2-Way Sync Engine</h4>
+            <p className="text-[11px] text-slate-400 mt-1">Sinkronisasi otomatis spreadsheet online ke database internal.</p>
+          </div>
+        </div>
+
+        {/* Looker Studio Connector */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start gap-3.5">
+          <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+            <BarChart3 className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-500" />
+              <span className="text-[11px] font-bold text-blue-600 dark:text-blue-400 uppercase">Looker Studio</span>
+            </div>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">BI Analytics Live Feed</h4>
+            <p className="text-[11px] text-slate-400 mt-1">Dashboard interaktif visualisasi pimpinan terhubung real-time.</p>
+          </div>
+        </div>
+
+        {/* Storage Capacity */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start gap-3.5">
+          <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
+            <Database className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-bold text-purple-600 dark:text-purple-400 uppercase">Total Data Riil</span>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">
+              {totalRecords.budget + totalRecords.forecast + totalRecords.realization} Rekaman Transaksi
+            </h4>
+            <p className="text-[11px] text-slate-400 mt-1">
+              Budget: {totalRecords.budget} &bull; Forecast: {totalRecords.forecast} &bull; Realisasi: {totalRecords.realization}
+            </p>
+          </div>
+        </div>
+
+        {/* Security & Encryption */}
+        <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex items-start gap-3.5">
+          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+            <ShieldCheck className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase">Enkripsi Enterprise</span>
+            <h4 className="text-xs font-bold text-slate-900 dark:text-white mt-0.5">AES-256 GCM & SHA-256</h4>
+            <p className="text-[11px] text-slate-400 mt-1">Sesi login & backup terproteksi standar ISO/IEC 27001.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* SECTION 4: KREDENSIAL LOGIN & ENKRIPSI CADANGAN DATA      */}
+      {/* ========================================================= */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Credentials & Security */}
         <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-6">
           <div>
             <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
               <Key className="w-4 h-4 text-amber-500" />
-              Kredensial Login & Akses Otoritas
+              Kredensial Login & Hak Akses Administrator
             </h3>
-            <p className="text-xs text-slate-400 mt-0.5">Perbarui kata sandi dan hak akses akun administrator</p>
+            <p className="text-xs text-slate-400 mt-0.5">Perbarui kata sandi akun resmi administrator DABACO</p>
           </div>
 
           {credSuccess && (
@@ -674,31 +924,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* EDIT MASTER ITEM MODAL */}
-      {editingItem && (
+      {/* ========================================================= */}
+      {/* MODAL: EDIT COST CENTER                                   */}
+      {/* ========================================================= */}
+      {editingCC && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-md p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h4 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
-                <Edit2 className="w-4 h-4 text-blue-500" />
-                Edit Master Item
+                <Edit2 className="w-4 h-4 text-red-500" />
+                Edit Master Cost Center
               </h4>
               <button
-                onClick={() => setEditingItem(null)}
+                onClick={() => setEditingCC(null)}
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} className="space-y-4 text-xs">
+            <form onSubmit={handleSaveEditCC} className="space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Kode Item (Tetap)
+                  Kode Cost Center (Tetap)
                 </label>
                 <input
                   type="text"
-                  value={editingItem.code}
+                  value={editingCC.code}
                   disabled
                   className="w-full p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-500 font-mono"
                 />
@@ -706,12 +958,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Nama Deskripsi Item
+                  Nama Deskripsi Lengkap
                 </label>
                 <input
                   type="text"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
+                  value={editCCName}
+                  onChange={(e) => setEditCCName(e.target.value)}
                   required
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
                 />
@@ -719,47 +971,40 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Kategori Anggaran
+                  Departemen / Bagian
                 </label>
-                <select
-                  value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value)}
+                <input
+                  type="text"
+                  value={editCCDept}
+                  onChange={(e) => setEditCCDept(e.target.value)}
+                  required
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                >
-                  {STANDARD_CATEGORIES.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                  {!STANDARD_CATEGORIES.includes(editCategory) && (
-                    <option value={editCategory}>{editCategory}</option>
-                  )}
-                </select>
+                />
               </div>
 
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                  Status
+                  Kepala Bagian / PIC
                 </label>
-                <select
-                  value={editStatus}
-                  onChange={(e) => setEditStatus(e.target.value as 'Active' | 'Inactive')}
+                <input
+                  type="text"
+                  value={editCCHead}
+                  onChange={(e) => setEditCCHead(e.target.value)}
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
+                />
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
                 <button
                   type="button"
-                  onClick={() => setEditingItem(null)}
+                  onClick={() => setEditingCC(null)}
                   className="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
                   <Check className="w-3.5 h-3.5" />
                   <span>Simpan Perubahan</span>
@@ -770,8 +1015,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* DELETE CONFIRMATION MODAL */}
-      {deletingItem && (
+      {/* ========================================================= */}
+      {/* MODAL: DELETE CONFIRMATION COST CENTER                    */}
+      {/* ========================================================= */}
+      {deletingCC && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-in fade-in">
           <div className="w-full max-w-sm p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 text-xs">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto border border-rose-500/20">
@@ -780,32 +1027,32 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
             <div className="text-center space-y-1">
               <h4 className="font-bold text-base text-slate-900 dark:text-white">
-                Hapus Master Item?
+                Hapus Cost Center?
               </h4>
               <p className="text-slate-500 dark:text-slate-400">
-                Anda akan menghapus item master berikut dari katalog sistem:
+                Anda akan menghapus Cost Center berikut dari katalog resmi sistem:
               </p>
               <div className="p-3 my-2 rounded-xl bg-slate-50 dark:bg-slate-800 font-mono text-xs text-rose-600 dark:text-rose-400 font-bold">
-                {deletingItem.code}
+                {deletingCC.code}
                 <div className="font-sans font-normal text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-                  {deletingItem.name || deletingItem.code}
+                  {deletingCC.name || deletingCC.department}
                 </div>
               </div>
               <p className="text-[11px] text-amber-600 dark:text-amber-400">
-                Catatan: Data transaksi historis yang sudah tersimpan tidak akan terhapus.
+                Catatan: Data transaksi historis (Budget, Forecast, Realisasi) yang telah tersimpan tidak akan terhapus.
               </p>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2">
               <button
-                onClick={() => setDeletingItem(null)}
+                onClick={() => setDeletingCC(null)}
                 className="flex-1 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 font-semibold hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
               >
                 Batal
               </button>
               <button
-                onClick={handleConfirmDelete}
-                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-colors flex items-center justify-center gap-1.5"
+                onClick={handleConfirmDeleteCC}
+                className="flex-1 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <Trash2 className="w-3.5 h-3.5" />
                 <span>Ya, Hapus</span>

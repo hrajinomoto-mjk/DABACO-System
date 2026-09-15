@@ -676,6 +676,29 @@ export default function App() {
     showToast(`Email Laporan Eksekutif berhasil dikirimkan ke: ${recipient}`);
   };
 
+  const handleAddCostCenter = (cc: MasterCostCenter) => {
+    setCostCenters(prev => {
+      const idx = prev.findIndex(c => c.code.toLowerCase() === cc.code.toLowerCase());
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = cc;
+        return next;
+      }
+      return [cc, ...prev];
+    });
+    showToast(`Cost Center "${cc.code}" berhasil disimpan.`);
+  };
+
+  const handleEditCostCenter = (updatedCC: MasterCostCenter) => {
+    setCostCenters(prev => prev.map(c => c.code === updatedCC.code ? updatedCC : c));
+    showToast(`Cost Center "${updatedCC.code}" berhasil diperbarui.`);
+  };
+
+  const handleDeleteCostCenter = (code: string) => {
+    setCostCenters(prev => prev.filter(c => c.code !== code));
+    showToast(`Cost Center "${code}" berhasil dihapus.`);
+  };
+
   const handleAddMasterItem = (item: MasterItem) => {
     setMasterItems(prev => {
       const existsIndex = prev.findIndex(i => i.code.toLowerCase() === item.code.toLowerCase());
@@ -1137,14 +1160,17 @@ export default function App() {
                 <SettingsView
                   darkMode={darkMode}
                   setDarkMode={setDarkMode}
-                  masterItems={masterItems}
-                  onAddMasterItem={handleAddMasterItem}
-                  onEditMasterItem={handleEditMasterItem}
-                  onDeleteMasterItem={handleDeleteMasterItem}
-                  onAutoSyncMasterData={handleAutoSyncMasterData}
                   costCenters={costCenters}
+                  onAddCostCenter={handleAddCostCenter}
+                  onEditCostCenter={handleEditCostCenter}
+                  onDeleteCostCenter={handleDeleteCostCenter}
+                  onAutoSyncMasterData={handleAutoSyncMasterData}
+                  masterItems={masterItems}
                   totalRecords={{ budget: budget.length, forecast: forecast.length, realization: realization.length }}
-                  dataset={{ budget, forecast, realization, metadata: { version: '2.4', company: 'PT Ajinomoto Indonesia - PT Ajinex International, Mojokerto Factory' } }}
+                  dataset={{ budget, forecast, realization, metadata: { version: '2.6', company: 'PT Ajinomoto Indonesia - PT Ajinex International, Mojokerto Factory' } }}
+                  budgetData={budget}
+                  forecastData={forecast}
+                  realizationData={realization}
                 />
               )}
             </main>
