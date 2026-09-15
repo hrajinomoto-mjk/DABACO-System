@@ -735,7 +735,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-extrabold uppercase text-[10px]">
                 <th className="pb-3 px-3">Departemen / Cost Center</th>
-                <th className="pb-3 px-3">Kepala Departemen</th>
+                <th className="pb-3 px-3">Dept : Human Resources Dept.</th>
                 <th className="pb-3 px-3 text-right">Budget</th>
                 <th className="pb-3 px-3 text-right">Proyeksi (Forecast)</th>
                 <th className="pb-3 px-3 text-right">Realisasi (Actual)</th>
