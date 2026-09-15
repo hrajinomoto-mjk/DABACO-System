@@ -734,8 +734,8 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
           <table className="w-full text-left text-xs">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-extrabold uppercase text-[10px]">
-                <th className="pb-3 px-3">Departemen / Cost Center</th>
-                <th className="pb-3 px-3">Dept : Human Resources Dept.</th>
+                <th className="pb-3 px-3">Cost Center</th>
+                <th className="pb-3 px-3">Departemen</th>
                 <th className="pb-3 px-3 text-right">Budget</th>
                 <th className="pb-3 px-3 text-right">Proyeksi (Forecast)</th>
                 <th className="pb-3 px-3 text-right">Realisasi (Actual)</th>
@@ -751,7 +751,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
                     <p className="text-[11px] text-slate-500 font-mono">{dept.code} &bull; {dept.department}</p>
                   </td>
                   <td className="py-3.5 px-3 font-medium text-slate-700 dark:text-slate-300">
-                    {dept.headOfDept}
+                    Human Resources Dept.
                   </td>
                   <td className="py-3.5 px-3 text-right font-medium text-slate-600 dark:text-slate-400">
                     {formatIDR(dept.budget)}
