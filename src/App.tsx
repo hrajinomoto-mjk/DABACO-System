@@ -103,6 +103,20 @@ export default function App() {
     return localStorage.getItem('dabaco_sidebar_collapsed') === 'true';
   });
 
+  // Strip any URL hash (e.g. #security, #features) so the address bar only shows the clean domain
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    const cleanUrlHash = () => {
+      if (typeof window !== 'undefined' && window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+    window.addEventListener('hashchange', cleanUrlHash);
+    return () => window.removeEventListener('hashchange', cleanUrlHash);
+  }, []);
+
   const handleToggleSidebarCollapse = () => {
     setIsSidebarCollapsed(prev => {
       const next = !prev;

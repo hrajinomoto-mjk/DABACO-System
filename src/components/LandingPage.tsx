@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   ShieldCheck,
   ArrowRight,
@@ -34,6 +34,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   darkMode,
   setDarkMode
 }) => {
+  // Automatically strip any hash from URL bar (e.g., #security, #features)
+  // so the address bar only displays the clean domain URL.
+  useEffect(() => {
+    if (window.location.hash) {
+      const targetId = window.location.hash.replace(/^#/, '');
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      if (targetId) {
+        setTimeout(() => {
+          const el = document.getElementById(targetId);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }, 150);
+      }
+    }
+
+    const handleHash = () => {
+      if (window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
+
+  const scrollToSection = (sectionId: string) => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className={`relative min-h-screen w-full transition-colors duration-200 overflow-x-hidden ${
       darkMode ? 'bg-[#080c14] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
@@ -77,30 +108,33 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           {/* Navigation Links */}
           <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold">
-            <a
-              href="#features"
-              className={`transition-colors hover:text-red-600 ${
+            <button
+              type="button"
+              onClick={() => scrollToSection('features')}
+              className={`transition-colors hover:text-red-600 cursor-pointer ${
                 darkMode ? 'text-slate-300' : 'text-slate-700'
               }`}
             >
               Fitur Utama
-            </a>
-            <a
-              href="#architecture"
-              className={`transition-colors hover:text-red-600 ${
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('architecture')}
+              className={`transition-colors hover:text-red-600 cursor-pointer ${
                 darkMode ? 'text-slate-300' : 'text-slate-700'
               }`}
             >
               Alur Kerja
-            </a>
-            <a
-              href="#security"
-              className={`transition-colors hover:text-red-600 ${
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('security')}
+              className={`transition-colors hover:text-red-600 cursor-pointer ${
                 darkMode ? 'text-slate-300' : 'text-slate-700'
               }`}
             >
               Keamanan Data
-            </a>
+            </button>
           </nav>
 
           {/* Action CTAs & Theme Toggle */}
@@ -170,9 +204,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <ArrowRight className="w-4 h-4" />
           </button>
 
-          <a
-            href="#architecture"
-            className={`w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all ${
+          <button
+            type="button"
+            onClick={() => scrollToSection('architecture')}
+            className={`w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer ${
               darkMode
                 ? 'bg-slate-800/80 border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800 shadow-xs'
                 : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100 shadow-xs'
@@ -180,7 +215,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           >
             <span>Lihat Alur Kerja Sistem</span>
             <ChevronRight className="w-4 h-4" />
-          </a>
+          </button>
         </div>
 
         {/* Live Status Indicators Banner - 2x2 grid on mobile, flex row on desktop */}
