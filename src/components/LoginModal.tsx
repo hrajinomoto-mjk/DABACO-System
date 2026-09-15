@@ -91,8 +91,8 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
-      <div className={`relative w-full max-w-md rounded-3xl border shadow-2xl overflow-hidden transition-colors ${
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-in fade-in duration-200">
+      <div className={`relative w-full max-w-md max-h-[92vh] overflow-y-auto rounded-2xl sm:rounded-3xl border shadow-2xl transition-colors ${
         darkMode ? 'bg-[#0e1320] border-slate-800 text-white' : 'bg-white border-slate-200 text-slate-900'
       }`}>
         

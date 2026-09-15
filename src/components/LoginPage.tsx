@@ -150,7 +150,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       <header className={`w-full border-b backdrop-blur-xl sticky top-0 z-30 transition-colors ${
         darkMode ? 'bg-[#090d16]/85 border-slate-800/80' : 'bg-white/85 border-slate-200/90 shadow-xs'
       }`}>
-        <div className="w-full max-w-[1680px] mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
+        <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2">
           {/* Left: Back button & brand */}
           <div className="flex items-center gap-2 sm:gap-3.5 min-w-0">
             <button
@@ -163,8 +163,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               title="Kembali ke Halaman Beranda DABACO"
             >
               <ArrowLeft className="w-4 h-4 shrink-0 text-red-600" />
-              <span className="hidden xs:inline">Kembali ke Beranda</span>
-              <span className="xs:hidden">Kembali</span>
+              <span className="hidden sm:inline">Kembali ke Beranda</span>
+              <span className="sm:hidden">Kembali</span>
             </button>
 
             <div className="flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800 min-w-0">
@@ -173,10 +173,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
               <div className="leading-tight min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black text-xs sm:text-sm tracking-tight text-red-600 dark:text-red-500">
+                  <span className="font-black text-xs sm:text-sm tracking-tight text-red-600 dark:text-red-500 shrink-0">
                     DABACO
                   </span>
-                  <span className="hidden md:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                  <span className="hidden md:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 truncate">
                     v2.6 Enterprise
                   </span>
                 </div>
@@ -188,7 +188,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           </div>
 
           {/* Right actions: Help & Theme Toggle */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
             <button
               onClick={() => setShowHelpModal(true)}
               className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
@@ -219,7 +219,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       {/* Main Responsive Container */}
       <main className="flex-1 flex items-center justify-center p-3 sm:p-5 md:p-6 lg:p-8 relative z-10 w-full">
-        <div className={`w-full max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-[1240px] rounded-2xl sm:rounded-3xl border shadow-xl lg:shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 transition-all duration-300 ${
+        <div className={`w-full max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-6xl 2xl:max-w-[1200px] rounded-2xl sm:rounded-3xl border shadow-xl lg:shadow-2xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 transition-all duration-300 ${
           darkMode
             ? 'bg-[#0f1422]/95 border-slate-800/90 shadow-[0_20px_60px_rgba(0,0,0,0.7)]'
             : 'bg-white/95 border-slate-200/90 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.08)]'
@@ -228,16 +228,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* ========================================================= */}
           {/* LEFT COLUMN: Corporate Identity & Security Architecture   */}
           {/* ========================================================= */}
-          <div className={`lg:col-span-5 p-5 sm:p-7 lg:p-8 xl:p-9 flex flex-col justify-between border-b lg:border-b-0 lg:border-r transition-colors ${
+          <div className={`lg:col-span-5 p-4 sm:p-6 lg:p-8 xl:p-9 flex flex-col justify-between border-b lg:border-b-0 lg:border-r transition-colors ${
             darkMode
               ? 'bg-gradient-to-br from-[#121829] via-[#0f1422] to-[#0a0e18] border-slate-800/90'
               : 'bg-gradient-to-br from-rose-50/50 via-slate-50/40 to-white border-slate-200/80'
           }`}>
             <div>
               {/* Brand Emblem & Plant Badge Header */}
-              <div className="flex items-center justify-between gap-3 mb-4 sm:mb-5">
-                <div className="inline-flex h-11 sm:h-12 px-3.5 py-1.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs items-center justify-center">
-                  <AjinomotoLogo variant="full" className="h-7 sm:h-8 w-auto" />
+              <div className="flex items-center justify-between gap-3 mb-3 sm:mb-5">
+                <div className="inline-flex h-10 sm:h-12 px-3 sm:px-3.5 py-1.5 rounded-xl sm:rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs items-center justify-center">
+                  <AjinomotoLogo variant="full" className="h-6 sm:h-8 w-auto" />
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-red-600/10 text-red-700 dark:text-red-400 border border-red-500/20 text-[10px] sm:text-[11px] font-bold">
                   <Building2 className="w-3 h-3 shrink-0" />
@@ -246,26 +246,48 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
 
               {/* Plant Corporation Full Title */}
-              <div className="text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase mb-2">
+              <div className="text-[10px] sm:text-[11px] font-bold tracking-wider text-slate-500 dark:text-slate-400 uppercase mb-1.5 sm:mb-2 truncate">
                 PT Ajinomoto Indonesia &bull; PT Ajinex International
               </div>
 
               {/* Main Headline */}
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight text-slate-900 dark:text-white">
-                Gateway Otentikasi <br />
+              <h1 className="text-lg sm:text-2xl lg:text-3xl font-black tracking-tight leading-tight text-slate-900 dark:text-white">
+                Gateway Otentikasi <br className="hidden sm:inline" />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-rose-600 to-red-700 dark:from-red-500 dark:via-rose-400 dark:to-red-400">
                   HR Budget Ecosystem
                 </span>
               </h1>
 
-              <p className={`mt-2.5 text-xs sm:text-sm leading-relaxed ${
+              <p className={`mt-2 sm:mt-2.5 text-xs sm:text-sm leading-relaxed ${
                 darkMode ? 'text-slate-300 font-normal' : 'text-slate-600 font-normal'
               }`}>
                 Portal terintegrasi kendali pagu anggaran tahunan, forecasting bulanan, sinkronisasi Google Sheets, Looker Studio, dan realisasi aktual HR Development.
               </p>
 
-              {/* Core Feature Highlights: 3 Proportional Micro-Cards */}
-              <div className="mt-5 sm:mt-6 space-y-2.5 sm:space-y-3">
+              {/* Compact Security Pill Strip on Mobile / Tablets (< lg) */}
+              <div className="lg:hidden mt-3 sm:mt-4 grid grid-cols-3 gap-1.5 sm:gap-2">
+                <div className={`p-2 rounded-xl border flex flex-col items-center text-center gap-1 ${
+                  darkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-white border-slate-200/80 shadow-2xs'
+                }`}>
+                  <ShieldCheck className="w-4 h-4 text-red-600 dark:text-red-400" />
+                  <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 leading-tight">Role Access</span>
+                </div>
+                <div className={`p-2 rounded-xl border flex flex-col items-center text-center gap-1 ${
+                  darkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-white border-slate-200/80 shadow-2xs'
+                }`}>
+                  <Fingerprint className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 leading-tight">AES-256</span>
+                </div>
+                <div className={`p-2 rounded-xl border flex flex-col items-center text-center gap-1 ${
+                  darkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-white border-slate-200/80 shadow-2xs'
+                }`}>
+                  <Zap className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                  <span className="text-[10px] font-bold text-slate-800 dark:text-slate-200 leading-tight">Sync Sheets</span>
+                </div>
+              </div>
+
+              {/* Core Feature Highlights on Desktop (lg+) */}
+              <div className="hidden lg:block mt-5 sm:mt-6 space-y-2.5 sm:space-y-3">
                 <div className={`p-3 sm:p-3.5 rounded-xl sm:rounded-2xl border transition-all ${
                   darkMode
                     ? 'bg-slate-800/40 border-slate-700/60 hover:bg-slate-800/70'
@@ -329,7 +351,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             {/* Bottom Status Bar */}
-            <div className={`mt-6 pt-4 border-t flex flex-wrap items-center justify-between gap-2 text-[11px] ${
+            <div className={`mt-4 sm:mt-6 pt-3 sm:pt-4 border-t flex flex-wrap items-center justify-between gap-2 text-[10px] sm:text-[11px] ${
               darkMode ? 'border-slate-800 text-slate-400' : 'border-slate-200 text-slate-500'
             }`}>
               <div className="flex items-center gap-1.5 font-medium">
@@ -338,7 +360,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <span className="text-slate-400 dark:text-slate-600">&bull;</span>
                 <span>Node Mojokerto</span>
               </div>
-              <span className="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
+              <span className="font-mono text-[9px] sm:text-[10px] px-2 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
                 TLS 1.3 Active
               </span>
             </div>
@@ -347,12 +369,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* ========================================================= */}
           {/* RIGHT COLUMN: Credential Form & Quick Demo Fill           */}
           {/* ========================================================= */}
-          <div className="lg:col-span-7 p-5 sm:p-7 lg:p-8 xl:p-9 flex flex-col justify-between">
+          <div className="lg:col-span-7 p-4 sm:p-6 lg:p-8 xl:p-9 flex flex-col justify-between">
             <div>
               {/* Card Form Header */}
-              <div className="flex items-center justify-between gap-2 mb-4">
-                <span className="text-[11px] font-extrabold tracking-wider uppercase text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600" />
+              <div className="flex items-center justify-between gap-2 mb-3 sm:mb-4">
+                <span className="text-[10px] sm:text-[11px] font-extrabold tracking-wider uppercase text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
                   Otentikasi Kredensial Resmi
                 </span>
                 <button
@@ -362,37 +384,37 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     darkMode ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
+                  <HelpCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
                   <span>Bantuan HR</span>
                 </button>
               </div>
 
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+              <h2 className="text-lg sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
                 Masuk ke Akun Anda
               </h2>
-              <p className={`text-xs mt-1 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              <p className={`text-xs mt-1 leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
                 Gunakan kredensial internal Ajinomoto untuk mengakses dashboard operasional DABACO.
               </p>
 
               {/* Authority Privilege Notice */}
-              <div className="mt-4 sm:mt-5 mb-4">
-                <div className={`p-3 rounded-xl sm:rounded-2xl border flex items-center justify-between gap-3 ${
+              <div className="mt-3.5 sm:mt-4 mb-3.5 sm:mb-4">
+                <div className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl border flex items-center justify-between gap-2.5 sm:gap-3 ${
                   darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-red-600/15 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                  <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                    <div className="w-7 sm:w-8 h-7 sm:h-8 rounded-lg bg-red-600/15 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
                       <ShieldCheck className="w-4 h-4" />
                     </div>
                     <div className="min-w-0">
-                      <span className="text-xs font-bold block text-slate-900 dark:text-slate-100">
+                      <span className="text-xs font-bold block text-slate-900 dark:text-slate-100 truncate">
                         Otoritas Akses: Super Admin
                       </span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate block">
+                      <span className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 truncate block">
                         HR Development &bull; Kendali Penuh Modul Anggaran
                       </span>
                     </div>
                   </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600/10 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0">
+                  <span className="text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-600/10 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0">
                     Full Privilege
                   </span>
                 </div>
@@ -400,17 +422,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
               {/* Error Message Box */}
               {error && (
-                <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2.5 animate-fadeIn">
+                <div className="mb-3.5 sm:mb-4 p-2.5 sm:p-3 rounded-xl bg-rose-500/10 border border-rose-500/25 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2.5 animate-fadeIn">
                   <AlertCircle className="w-4 h-4 shrink-0" />
                   <span className="font-medium leading-relaxed">{error}</span>
                 </div>
               )}
 
               {/* Form inputs */}
-              <form onSubmit={handleCredentialSubmit} className="space-y-3.5 sm:space-y-4">
+              <form onSubmit={handleCredentialSubmit} className="space-y-3 sm:space-y-4">
                 {/* Username Input */}
                 <div>
-                  <label className={`block text-xs font-bold mb-1.5 ${
+                  <label className={`block text-xs font-bold mb-1 sm:mb-1.5 ${
                     darkMode ? 'text-slate-200' : 'text-slate-800'
                   }`}>
                     Username Pegawai / Email
@@ -437,7 +459,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
                 {/* Password Input */}
                 <div>
-                  <div className="flex items-center justify-between mb-1.5">
+                  <div className="flex items-center justify-between mb-1 sm:mb-1.5">
                     <label className={`text-xs font-bold ${
                       darkMode ? 'text-slate-200' : 'text-slate-800'
                     }`}>
@@ -494,9 +516,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </span>
                   </label>
 
-                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                    <span>Otoritas:</span>
-                    <span className="text-red-600 dark:text-red-400 font-extrabold">Super Admin (HR)</span>
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                    <span className="hidden sm:inline">Otoritas:</span>
+                    <span className="text-red-600 dark:text-red-400 font-extrabold">Super Admin</span>
                   </span>
                 </div>
 
@@ -523,12 +545,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
 
             {/* Bottom Quick Fill: Clean Single Admin Card */}
-            <div className={`mt-5 pt-4 border-t ${
+            <div className={`mt-4 sm:mt-5 pt-3.5 sm:pt-4 border-t ${
               darkMode ? 'border-slate-800' : 'border-slate-200'
             }`}>
               <div className="flex items-center justify-between mb-2">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-amber-500" />
+                  <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
                   Akses Cepat Demo Akun:
                 </span>
                 <span className="text-[10px] text-slate-400">Klik untuk isi instan</span>
@@ -551,7 +573,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
                   <div className="w-7 h-7 rounded-lg bg-red-600/15 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-xs shrink-0">
                     SA
                   </div>
@@ -570,12 +592,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </button>
 
               {/* Corporate Security Cert */}
-              <div className="mt-3 flex items-center justify-between text-[10px] text-slate-400">
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-500" />
-                  Internal Network Only &bull; ISO 27001
+              <div className="mt-2.5 sm:mt-3 flex items-center justify-between text-[10px] text-slate-400">
+                <span className="flex items-center gap-1 truncate">
+                  <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
+                  Internal Network &bull; ISO 27001
                 </span>
-                <span className="font-mono text-[9px]">PT AI - MOJOKERTO</span>
+                <span className="font-mono text-[9px] shrink-0">PT AI - MOJOKERTO</span>
               </div>
             </div>
           </div>
@@ -583,10 +605,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       </main>
 
       {/* Footer */}
-      <footer className={`py-3.5 sm:py-4 px-4 text-center text-xs transition-colors border-t relative z-10 ${
+      <footer className={`py-3 sm:py-4 px-4 text-center text-xs transition-colors border-t relative z-10 ${
         darkMode ? 'border-slate-800/80 text-slate-400 bg-[#080c14]/90' : 'border-slate-200 text-slate-500 bg-white/70'
       }`}>
-        <p className="font-medium text-[11px] sm:text-xs">
+        <p className="font-medium text-[10px] sm:text-xs">
           PT Ajinomoto Indonesia &bull; PT Ajinex International, Mojokerto Factory &bull; DABACO Budget Control System &copy; {new Date().getFullYear()}
         </p>
       </footer>
@@ -595,8 +617,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       {/* MODAL: Bantuan Akun & Pemulihan Akses Internal (HR)       */}
       {/* ========================================================= */}
       {showHelpModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className={`w-full max-w-md rounded-2xl sm:rounded-3xl border shadow-2xl p-6 sm:p-7 relative ${
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
+          <div className={`w-full max-w-md max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl border shadow-2xl p-5 sm:p-7 relative ${
             darkMode ? 'bg-[#0f1422] border-slate-800 text-slate-100' : 'bg-white border-slate-200 text-slate-900'
           }`}>
             <button
