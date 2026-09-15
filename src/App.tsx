@@ -940,6 +940,10 @@ export default function App() {
           onOpenLogin={() => setCurrentPage('login')}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
+          budgetData={budget}
+          forecastData={forecast}
+          realizationData={realization}
+          costCenters={costCenters}
         />
       )}
 
