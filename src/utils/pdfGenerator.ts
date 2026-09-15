@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { BudgetRecord, ForecastRecord, RealizationRecord, CategoryDetail, ItemSummary } from '../types';
+import { AJINOMOTO_LOGO_BASE64 } from './ajinomotoLogoData';
 
 export function formatIDR(amount: number): string {
   return 'Rp ' + Math.round(amount || 0).toLocaleString('id-ID');
@@ -93,19 +94,10 @@ export function generateExecutivePDF(payload: PDFReportPayload): void {
   doc.setFillColor(230, 0, 42);
   doc.rect(15, 20, 180, 6, 'F');
 
-  // Brand Badge
+  // Brand Badge (Official Ajinomoto Logo)
   doc.setFillColor(255, 255, 255);
   doc.roundedRect(25, 38, 24, 22, 2, 2, 'F');
-  doc.setFillColor(230, 0, 42); // Ajinomoto Red
-  doc.circle(33, 46, 4.5, 'F');
-  doc.setFillColor(255, 255, 255);
-  doc.circle(33, 46, 2.2, 'F');
-  doc.setFillColor(230, 0, 42);
-  doc.rect(35, 43.5, 6, 6.5, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(6);
-  doc.setTextColor(230, 0, 42);
-  doc.text('AJINOMOTO', 37, 57, { align: 'center' });
+  doc.addImage(AJINOMOTO_LOGO_BASE64, 'PNG', 26.8, 41.6, 20.4, 14.8, undefined, 'FAST');
 
   // Organization texts
   doc.setTextColor(201, 161, 90); // Gold
