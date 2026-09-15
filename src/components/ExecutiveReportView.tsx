@@ -17,6 +17,7 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   PieChart,
   ArrowUpRight,
   ArrowDownRight,
@@ -274,7 +275,7 @@ Laporan: DABACO Financial & Budget Execution Control (${periodLabel})
 Pabrik Mojokerto | Tanggal: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
 
 *1. RINGKASAN EKSEKUTIF KEUANGAN*
-• Pagu Anggaran (Budget): ${formatIDR(totalBudget)}
+• Budget Anggaran: ${formatIDR(totalBudget)}
 • Proyeksi Kas (Forecast): ${formatIDR(totalForecast)}
 • Realisasi Aktual (Actual): ${formatIDR(totalActual)}
 • Rasio Penyerapan: ${absorptionRate.toFixed(1)}% (Status: ${absorptionRate <= 85 ? 'Terkendali & Prudent' : 'Perlu Perhatian'})
@@ -369,52 +370,61 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
           </div>
         </div>
 
-        {/* Filter Controls (Horizon & Department) */}
-        <div className="pt-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <Calendar className="w-3.5 h-3.5" /> Horizon Waktu:
+        {/* Filter Controls (Horizon & Department) - Fully Responsive */}
+        <div className="pt-4 flex flex-col xl:flex-row xl:items-center justify-between gap-3.5 sm:gap-4">
+          {/* Horizon Waktu */}
+          <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 min-w-0">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shrink-0">
+              <Calendar className="w-3.5 h-3.5 text-red-600 dark:text-red-500" /> Horizon Waktu:
             </span>
-            <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700">
+            <div className="inline-flex p-1 rounded-xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 max-w-full overflow-x-auto">
               {([
-                { id: 'ALL', label: 'FY Penuh (Apr–Mar)' },
-                { id: 'Q1', label: 'Q1 (Apr–Jun)' },
-                { id: 'Q2', label: 'Q2 (Jul–Sep)' },
-                { id: 'Q3', label: 'Q3 (Oct–Dec)' },
-                { id: 'Q4', label: 'Q4 (Jan–Mar)' }
+                { id: 'ALL', full: 'FY Penuh (Apr–Mar)', short: 'FY Penuh' },
+                { id: 'Q1', full: 'Q1 (Apr–Jun)', short: 'Q1' },
+                { id: 'Q2', full: 'Q2 (Jul–Sep)', short: 'Q2' },
+                { id: 'Q3', full: 'Q3 (Oct–Dec)', short: 'Q3' },
+                { id: 'Q4', full: 'Q4 (Jan–Mar)', short: 'Q4' }
               ] as const).map(p => (
                 <button
                   key={p.id}
                   onClick={() => setSelectedPeriod(p.id)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                  className={`whitespace-nowrap px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shrink-0 ${
                     selectedPeriod === p.id
                       ? 'bg-red-600 text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                   }`}
-                  title={`Horizon Anggaran: ${p.label}`}
+                  title={`Horizon Budget: ${p.full}`}
                 >
-                  {p.label}
+                  <span className="hidden sm:inline">{p.full}</span>
+                  <span className="sm:hidden">{p.short}</span>
                 </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-              <Building2 className="w-3.5 h-3.5" /> Departemen:
+          {/* Department Filter (No Cut-off, Fluid Width, Truncate Safe) */}
+          <div className="flex items-center gap-2 w-full xl:w-auto min-w-0 max-w-full">
+            <span className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 shrink-0">
+              <Building2 className="w-3.5 h-3.5 text-red-600 dark:text-red-500" /> Departemen:
             </span>
-            <select
-              value={selectedCostCenter}
-              onChange={(e) => setSelectedCostCenter(e.target.value)}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500"
-            >
-              <option value="ALL">Semua Departemen (Pabrik Mojokerto)</option>
-              {costCenters.map(cc => (
-                <option key={cc.code} value={cc.code}>
-                  {cc.code} - {cc.name}
-                </option>
-              ))}
-            </select>
+            <div className="relative flex-1 sm:w-72 md:w-80 max-w-full min-w-0">
+              <select
+                value={selectedCostCenter}
+                onChange={(e) => setSelectedCostCenter(e.target.value)}
+                className="w-full pl-3 pr-8 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-red-500 truncate appearance-none cursor-pointer"
+                title="Filter Data per Departemen / Cost Center"
+              >
+                <option value="ALL">Semua Departemen (Pabrik Mojokerto)</option>
+                {costCenters.map(cc => (
+                  <option key={cc.code} value={cc.code}>
+                    {cc.code} - {cc.name}
+                  </option>
+                ))}
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2.5 text-slate-500 dark:text-slate-400">
+                <ChevronDown className="w-3.5 h-3.5" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -712,7 +722,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
               Evaluasi Kinerja Anggaran per Cost Center (Pabrik Mojokerto)
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Peringkat penyerapan pagu departemen dan akuntabilitas pimpinan divisi
+              Peringkat penyerapan budget departemen dan akuntabilitas pimpinan divisi
             </p>
           </div>
           <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -726,7 +736,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 font-extrabold uppercase text-[10px]">
                 <th className="pb-3 px-3">Departemen / Cost Center</th>
                 <th className="pb-3 px-3">Kepala Departemen</th>
-                <th className="pb-3 px-3 text-right">Pagu Budget</th>
+                <th className="pb-3 px-3 text-right">Budget</th>
                 <th className="pb-3 px-3 text-right">Proyeksi (Forecast)</th>
                 <th className="pb-3 px-3 text-right">Realisasi (Actual)</th>
                 <th className="pb-3 px-3 text-center">Penyerapan</th>
@@ -774,7 +784,7 @@ _Dokumen Dihasilkan Otomatis oleh Sistem DABACO v2.4_`;
                       </span>
                     ) : dept.status === 'warning' ? (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                        <AlertCircle className="w-3 h-3" /> Mendekati Pagu
+                        <AlertCircle className="w-3 h-3" /> Mendekati Budget
                       </span>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/10 text-red-600 dark:text-red-400">

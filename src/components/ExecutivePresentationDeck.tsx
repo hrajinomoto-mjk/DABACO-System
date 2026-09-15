@@ -187,7 +187,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
 
   // Slide Metadata for Tab Bar
   const slideTitles = [
-    { title: 'Makro Finansial & Health', subtitle: 'Pagu, Realisasi & Koridor' },
+    { title: 'Makro Finansial & Health', subtitle: 'Budget, Realisasi & Koridor' },
     { title: 'Kinerja Cost Center', subtitle: 'Evaluasi per Departemen' },
     { title: 'Struktur Pos Item Beban', subtitle: 'Distribusi Pos Item Pengeluaran' },
     { title: 'Pacing & Siklus FY', subtitle: 'Tren Bulanan Apr - Mar' },
@@ -472,7 +472,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span className={`text-[11px] font-extrabold uppercase tracking-wider ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                      Pagu Anggaran (Budget)
+                      Budget Anggaran
                     </span>
                     <span className="p-2 rounded-xl bg-slate-500/10 text-slate-600 dark:text-slate-300">
                       <Briefcase className="w-4 h-4" />
@@ -482,7 +482,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                     {formatIDR(totalBudget)}
                   </div>
                   <p className={`text-xs mt-2 flex items-center gap-1 font-medium ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>
-                    <span>Baseline Pagu Korporat FY 2026</span>
+                    <span>Baseline Budget Korporat FY 2026</span>
                   </p>
                 </div>
 
@@ -602,7 +602,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                   }`}>
                     <span>Realisasi Saat Ini: {absorptionRate.toFixed(1)}%</span>
                     <span>Target Aman Korporat: 75% - 85%</span>
-                    <span>Batas Pagu: 100%</span>
+                    <span>Batas Budget: 100%</span>
                   </div>
 
                   <div className={`relative h-4 w-full rounded-full overflow-hidden ${isDark ? 'bg-slate-800' : 'bg-slate-200'}`}>
@@ -700,7 +700,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
               <div className="flex items-center justify-center gap-2">
                 <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>Urutkan:</span>
                 {[
-                  { id: 'all', label: 'Alokasi Pagu Terbesar' },
+                  { id: 'all', label: 'Alokasi Budget Terbesar' },
                   { id: 'top_spenders', label: 'Realisasi Kas Tertinggi' },
                   { id: 'highest_savings', label: 'Efisiensi Kas Tertinggi' }
                 ].map(f => (
@@ -725,7 +725,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                 {displayedDepartments.map((dept, index) => {
                   const isOptimal = dept.absorptionRate <= 85;
                   const isWarning = dept.absorptionRate > 85 && dept.absorptionRate <= 100;
-                  const sisaPagu = Math.max(0, dept.budget - dept.actual);
+                  const sisaBudget = Math.max(0, dept.budget - dept.actual);
 
                   return (
                     <div
@@ -770,7 +770,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                       {/* Amounts Breakdown */}
                       <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs">
                         <div className="flex justify-between">
-                          <span className={`${isDark ? 'text-slate-300' : 'text-slate-600'} font-medium`}>Pagu Budget:</span>
+                          <span className={`${isDark ? 'text-slate-300' : 'text-slate-600'} font-medium`}>Budget:</span>
                           <span className={`font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatIDR(dept.budget)}</span>
                         </div>
                         <div className="flex justify-between">
@@ -778,8 +778,8 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
                           <span className={`font-black ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>{formatIDR(dept.actual)}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className={`${isDark ? 'text-emerald-300' : 'text-emerald-700'} font-medium`}>Sisa Pagu Kas:</span>
-                          <span className={`font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{formatIDR(sisaPagu)}</span>
+                          <span className={`${isDark ? 'text-emerald-300' : 'text-emerald-700'} font-medium`}>Sisa Budget Kas:</span>
+                          <span className={`font-bold ${isDark ? 'text-emerald-300' : 'text-emerald-700'}`}>{formatIDR(sisaBudget)}</span>
                         </div>
                       </div>
 
@@ -863,7 +863,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
 
                       <div className="space-y-1.5 text-xs">
                         <div className="flex justify-between">
-                          <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Pagu Anggaran:</span>
+                          <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Budget Anggaran:</span>
                           <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatIDR(cat.budget)}</span>
                         </div>
                         <div className="flex justify-between">
@@ -957,7 +957,7 @@ export const ExecutivePresentationDeck: React.FC<ExecutivePresentationDeckProps>
 
                         <div className="space-y-1 text-[11px]">
                           <div className="flex justify-between">
-                            <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Pagu:</span>
+                            <span className={isDark ? 'text-slate-300' : 'text-slate-600'}>Budget:</span>
                             <span className={`font-semibold ${isDark ? 'text-white' : 'text-slate-900'}`}>{formatIDR(m.Budget)}</span>
                           </div>
                           <div className="flex justify-between">

@@ -145,7 +145,7 @@ const CustomTrendTooltip: React.FC<CustomTooltipProps> = ({ active, payload, dar
         <div className="flex items-center justify-between">
           <span className="flex items-center gap-1.5 text-slate-700 dark:text-slate-300 font-semibold">
             <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
-            Planned Budget (Pagu):
+            Planned Budget:
           </span>
           <span className="font-extrabold text-blue-700 dark:text-blue-400">
             {formatIDR(data.plannedBudget)}
@@ -701,7 +701,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 id="dashboardCostCenterFilter"
                 value={selectedCostCenter}
                 onChange={(e) => setSelectedCostCenter(e.target.value)}
-                className={`px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
+                className={`max-w-full sm:max-w-xs truncate px-3 py-1.5 text-xs rounded-xl border font-semibold outline-none transition-all cursor-pointer ${
                   darkMode
                     ? 'bg-slate-800/90 border-slate-700 text-slate-100 focus:ring-2 focus:ring-red-500/40'
                     : 'bg-slate-50 border-slate-300 text-slate-900 shadow-2xs focus:ring-2 focus:ring-red-500/20 focus:border-red-500'
@@ -1487,7 +1487,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                   <Line
                     type="monotone"
                     dataKey="plannedBudget"
-                    name="Planned Budget (Pagu)"
+                    name="Planned Budget"
                     stroke="#3b82f6"
                     strokeWidth={2}
                     strokeDasharray="3 3"

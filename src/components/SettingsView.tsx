@@ -414,7 +414,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               className="w-full accent-rose-600 cursor-pointer"
             />
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              Peringatan merah saat serapan melampaui alokasi pagu.
+              Peringatan merah saat serapan melampaui alokasi budget.
             </p>
           </div>
 
@@ -433,7 +433,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             >
               <option value="Open">Terbuka (Revisi & Input Aktif)</option>
               <option value="Audited">Proses Audit (Read-Only Warning)</option>
-              <option value="Locked">Terkunci Resmi (Final Pagu)</option>
+              <option value="Locked">Terkunci Resmi (Final Budget)</option>
             </select>
             <p className="text-[11px] text-slate-500 dark:text-slate-400">
               Unit: <strong>Pabrik Mojokerto</strong>
@@ -476,7 +476,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   </span>
                 </div>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Daftar resmi Pusat Biaya operasional PT Ajinomoto Indonesia & PT Ajinex International (Pabrik Mojokerto). Digunakan sebagai pemetaan pagu anggaran dan serapan kas riil.
+                  Daftar resmi Pusat Biaya operasional PT Ajinomoto Indonesia & PT Ajinex International (Pabrik Mojokerto). Digunakan sebagai pemetaan budget anggaran dan serapan kas riil.
                 </p>
               </div>
             </div>

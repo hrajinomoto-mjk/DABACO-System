@@ -261,7 +261,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <p className={`mt-2 sm:mt-2.5 text-xs sm:text-sm leading-relaxed ${
                 darkMode ? 'text-slate-300 font-normal' : 'text-slate-600 font-normal'
               }`}>
-                Portal terintegrasi kendali pagu anggaran tahunan, forecasting bulanan, sinkronisasi Google Sheets, Looker Studio, dan realisasi aktual HR Development.
+                Portal terintegrasi kendali budget tahunan, forecasting bulanan, sinkronisasi Google Sheets, Looker Studio, dan realisasi aktual HR Development.
               </p>
 
               {/* Compact Security Pill Strip on Mobile / Tablets (< lg) */}
