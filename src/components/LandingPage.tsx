@@ -188,7 +188,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 pt-8 sm:pt-12 md:pt-16 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl lg:max-w-6xl 2xl:max-w-7xl mx-auto text-center">
+      <section className="relative z-10 min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex flex-col justify-center items-center py-8 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-5xl lg:max-w-6xl 2xl:max-w-7xl mx-auto text-center">
         {/* Eyebrow Chip */}
         <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-red-600/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold mb-4 sm:mb-5 max-w-full">
           <Sparkles className="w-3.5 h-3.5 shrink-0" />
@@ -239,9 +239,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Architecture & Data Flow Section */}
-      <section id="architecture" className={`relative z-10 py-12 sm:py-16 md:py-20 border-y transition-colors ${
-        darkMode ? 'bg-[#0a0f1c] border-slate-800/80' : 'bg-slate-100/70 border-slate-200/90'
-      }`}>
+      <section
+        id="architecture"
+        className={`relative z-10 scroll-mt-14 sm:scroll-mt-16 min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-12 sm:py-16 md:py-20 border-y transition-colors ${
+          darkMode ? 'bg-[#0a0f1c] border-slate-800/80' : 'bg-slate-100/70 border-slate-200/90'
+        }`}
+      >
         <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
             <p className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
@@ -315,7 +318,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* Security Banner & CTA Section */}
-      <section id="security" className="relative z-10 py-8 sm:py-12 px-4 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1600px] mx-auto">
+      <section
+        id="security"
+        className="relative z-10 scroll-mt-14 sm:scroll-mt-16 min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full"
+      >
         <div className={`rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 border relative overflow-hidden text-center shadow-lg transition-all ${
           darkMode
             ? 'bg-gradient-to-br from-[#131a2e] via-[#0e1424] to-[#0a0f1b] border-slate-800'
@@ -356,7 +362,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </section>
 
       {/* FAQ Section */}
-      <section id="faq" className="relative z-10 py-10 sm:py-14 md:py-18 px-4 sm:px-6 lg:px-8 max-w-4xl lg:max-w-5xl mx-auto">
+      <section
+        id="faq"
+        className="relative z-10 scroll-mt-14 sm:scroll-mt-16 min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl lg:max-w-5xl mx-auto w-full"
+      >
         <div className="text-center max-w-2xl mx-auto mb-7 sm:mb-10">
           <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-red-600 dark:text-red-500 mb-2">
             TANYA JAWAB OPERASIONAL
