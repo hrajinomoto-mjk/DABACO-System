@@ -1,19 +1,13 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   ShieldCheck,
   ArrowRight,
   Lock,
-  FileSpreadsheet,
-  BarChart3,
-  Mail,
-  Users,
   Sun,
   Moon,
   Sparkles,
   ChevronRight,
-  Layers,
-  ArrowUpRight,
-  FileCheck
+  ChevronDown
 } from 'lucide-react';
 import { ParticleCanvas } from './ParticleCanvas';
 import { AjinomotoLogo } from './AjinomotoLogo';
@@ -34,6 +28,31 @@ export const LandingPage: React.FC<LandingPageProps> = ({
   darkMode,
   setDarkMode
 }) => {
+  const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const faqItems = [
+    {
+      question: 'Bagaimana siklus perhitungan Tahun Fiskal (FY) pada sistem DABACO?',
+      answer: 'Siklus anggaran pada sistem DABACO mengikuti kalender Tahun Fiskal (Fiscal Year/FY) korporat PT Ajinomoto Indonesia yang dimulai pada tanggal 1 April hingga 31 Maret tahun berikutnya. Data anggaran diorganisasi ke dalam Semester 1 (April–September) dan Semester 2 (Oktober–Maret), mencakup perbandingan menyeluruh antara Budget tahunan, estimasi berjalan (Forecast), dan realisasi pengeluaran riil bulanan per Cost Center.'
+    },
+    {
+      question: 'Bagaimana pembagian dan pengelompokan Cost Center (Seksi) di DABACO?',
+      answer: 'Seluruh pos anggaran dikelompokkan secara tertib berdasarkan Master Cost Center masing-masing bagian di lingkungan Pabrik Mojokerto (seperti General Affairs, Personnel, Medical, HR Development, dan seksi terkait lainnya). Setiap seksi memiliki alokasi anggaran tersendiri sehingga pimpinan dan penanggung jawab seksi dapat memantau serapan dana secara transparan tanpa tumpang tindih.'
+    },
+    {
+      question: 'Bagaimana alur persetujuan dan evaluasi jika ada deviasi anggaran?',
+      answer: 'Sistem DABACO memonitor deviasi biaya secara otomatis. Jika serapan anggaran suatu seksi mendekati ambang batas peringatan 85% atau melampaui 100%, sistem akan langsung mengirimkan notifikasi Email Alert otomatis kepada PIC seksi terkait dan menandai status transaksi pada dashboard untuk segera ditinjau dan dievaluasi bersama Pimpinan HR Dept.'
+    },
+    {
+      question: 'Apakah data dapat diekspor ke dalam bentuk laporan resmi?',
+      answer: 'Ya, DABACO dilengkapi fitur ekspor Dokumen Dossier Eksekutif PDF resmi berlogo Ajinomoto berstandar korporat yang siap digunakan untuk presentasi dan rapat evaluasi manajemen. Selain berkas PDF, pengguna juga dapat mengunduh seluruh transaksi ke format CSV/Excel serta memanfaatkan sinkronisasi otomatis dengan Google Sheets.'
+    },
+    {
+      question: 'Bagaimana integrasi Google Sheets dan keamanan data di DABACO?',
+      answer: 'DABACO terintegrasi langsung dengan lembar kerja Google Sheets untuk memudahkan tim lapangan memperbarui data operasional harian. Seluruh data disimpan dan diamankan menggunakan enkripsi cloud, kontrol hak akses berbasis peran (RBAC), serta pencadangan berkala untuk menjaga integritas dan kerahasiaan data internal pabrik.'
+    }
+  ];
+
   // Automatically strip any hash from URL bar (e.g., #security, #features)
   // so the address bar only displays the clean domain URL.
   useEffect(() => {
@@ -110,15 +129,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <nav className="hidden lg:flex items-center gap-6 text-sm font-semibold">
             <button
               type="button"
-              onClick={() => scrollToSection('features')}
-              className={`transition-colors hover:text-red-600 cursor-pointer ${
-                darkMode ? 'text-slate-300' : 'text-slate-700'
-              }`}
-            >
-              Fitur Utama
-            </button>
-            <button
-              type="button"
               onClick={() => scrollToSection('architecture')}
               className={`transition-colors hover:text-red-600 cursor-pointer ${
                 darkMode ? 'text-slate-300' : 'text-slate-700'
@@ -134,6 +144,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               }`}
             >
               Keamanan Data
+            </button>
+            <button
+              type="button"
+              onClick={() => scrollToSection('faq')}
+              className={`transition-colors hover:text-red-600 cursor-pointer ${
+                darkMode ? 'text-slate-300' : 'text-slate-700'
+              }`}
+            >
+              FAQ
             </button>
           </nav>
 
@@ -169,15 +188,15 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       </header>
 
       {/* Hero Section */}
-      <section className="relative z-10 pt-6 sm:pt-10 md:pt-12 pb-6 sm:pb-9 px-4 sm:px-6 lg:px-8 max-w-5xl lg:max-w-6xl 2xl:max-w-7xl mx-auto text-center">
+      <section className="relative z-10 pt-8 sm:pt-12 md:pt-16 pb-12 sm:pb-16 md:pb-20 px-4 sm:px-6 lg:px-8 max-w-5xl lg:max-w-6xl 2xl:max-w-7xl mx-auto text-center">
         {/* Eyebrow Chip */}
-        <div className="inline-flex items-center gap-1.5 px-3 sm:px-3.5 py-1 rounded-full bg-red-600/10 border border-red-500/20 text-red-600 dark:text-red-400 text-[11px] sm:text-xs font-bold mb-3 sm:mb-4 max-w-full">
+        <div className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-red-600/10 border border-red-500/20 text-red-600 dark:text-red-400 text-xs font-semibold mb-4 sm:mb-5 max-w-full">
           <Sparkles className="w-3.5 h-3.5 shrink-0" />
           <span className="truncate">DABACO (Dashboard Budget Control System) &bull; Pabrik Mojokerto</span>
         </div>
 
         {/* Hero Title */}
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[44px] font-extrabold tracking-tight leading-[1.2] max-w-4xl mx-auto">
+        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-[46px] font-extrabold tracking-tight leading-[1.2] max-w-4xl mx-auto">
           Pengendalian Anggaran Pabrik yang{' '}
           <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-rose-600 to-amber-500">
             Praktis, Tertib, dan Terukur
@@ -185,7 +204,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </h1>
 
         {/* Subtitle */}
-        <p className={`mt-3 sm:mt-4 text-xs sm:text-sm md:text-base lg:text-lg leading-relaxed max-w-3xl mx-auto ${
+        <p className={`mt-4 sm:mt-5 text-xs sm:text-sm md:text-base lg:text-lg leading-relaxed max-w-3xl mx-auto ${
           darkMode ? 'text-slate-300' : 'text-slate-700'
         }`}>
           <strong className="font-semibold text-red-600 dark:text-red-400">DABACO (Dashboard Budget Control System)</strong> membantu Pimpinan HR Dept. dan anggota dibawahnya di Pabrik Mojokerto memantau budget,
@@ -194,10 +213,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
         </p>
 
         {/* Primary Action Buttons */}
-        <div className="mt-5 sm:mt-6 flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3.5 max-w-md sm:max-w-none mx-auto w-full">
+        <div className="mt-7 sm:mt-9 flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 max-w-md sm:max-w-none mx-auto w-full">
           <button
             onClick={onOpenLogin}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs sm:text-sm md:text-base shadow-md shadow-red-600/25 hover:shadow-red-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
+            className="w-full sm:w-auto flex items-center justify-center gap-2.5 px-7 sm:px-8 py-3.5 sm:py-4 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-bold text-sm sm:text-base shadow-md shadow-red-600/25 hover:shadow-red-600/40 hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer"
           >
             <Lock className="w-4 h-4" />
             <span>Masuk ke Portal DABACO</span>
@@ -207,7 +226,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <button
             type="button"
             onClick={() => scrollToSection('architecture')}
-            className={`w-full sm:w-auto flex items-center justify-center gap-1.5 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm font-semibold border transition-all cursor-pointer ${
+            className={`w-full sm:w-auto flex items-center justify-center gap-2 px-6 sm:px-7 py-3.5 sm:py-4 rounded-xl text-sm sm:text-base font-semibold border transition-all cursor-pointer ${
               darkMode
                 ? 'bg-slate-800/80 border-slate-700 text-slate-200 hover:text-white hover:bg-slate-800 shadow-xs'
                 : 'bg-white border-slate-300 text-slate-800 hover:bg-slate-100 shadow-xs'
@@ -217,196 +236,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
             <ChevronRight className="w-4 h-4" />
           </button>
         </div>
-
-        {/* Live Status Indicators Banner - 2x2 grid on mobile, flex row on desktop */}
-        <div className={`mt-5 sm:mt-7 grid grid-cols-2 md:flex md:flex-wrap items-center justify-center gap-2 sm:gap-3.5 md:gap-6 px-3.5 sm:px-5 py-2.5 sm:py-3 rounded-xl border text-[11px] sm:text-xs md:text-sm font-medium backdrop-blur-md transition-colors max-w-3xl mx-auto ${
-          darkMode ? 'bg-slate-900/60 border-slate-800 text-slate-300' : 'bg-white/90 border-slate-200 text-slate-800 shadow-xs'
-        }`}>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-            <span className="truncate">Spreadsheet: <b className="font-semibold">Aktif</b></span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-blue-500 shrink-0" />
-            <span className="truncate">Rekap Grafik: <b className="font-semibold">Siap</b></span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-amber-500 shrink-0" />
-            <span className="truncate">Alert Email: <b className="font-semibold">Siaga</b></span>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2">
-            <span className="w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-rose-500 shrink-0" />
-            <span className="truncate">Akses User: <b className="font-semibold">Terverifikasi</b></span>
-          </div>
-        </div>
-      </section>
-
-      {/* Feature Bento Grid Section */}
-      <section id="features" className="relative z-10 px-4 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1600px] mx-auto py-7 sm:py-10">
-        <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-600/10 text-red-600 dark:text-red-400 text-xs font-bold mb-2">
-            <Layers className="w-3.5 h-3.5" />
-            <span>Kemudahan Pengelolaan</span>
-          </div>
-          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">
-            Fitur Utama untuk Membantu Kerja Tim Setiap Hari
-          </h2>
-          <p className={`text-xs sm:text-sm md:text-base mt-2 leading-relaxed ${
-            darkMode ? 'text-slate-400' : 'text-slate-600'
-          }`}>
-            Dirancang praktis agar staf administrasi, penanggung jawab seksi, dan pimpinan dapat mengawasi anggaran tanpa kerumitan administrasi manual.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-5">
-          {/* Bento Card 1: Google Sheets Sync */}
-          <div className={`p-4 sm:p-5 lg:p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-[#0f1422] border-slate-800 hover:border-emerald-500/50 shadow-xs'
-              : 'bg-white border-slate-200 shadow-xs hover:border-emerald-500/50 hover:shadow-sm'
-          }`}>
-            <div>
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 flex items-center justify-center mb-3">
-                <FileSpreadsheet className="w-4 sm:w-5 h-4 sm:h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold mb-1.5 sm:mb-2">Sinkronisasi Google Sheets</h3>
-              <p className={`text-xs sm:text-sm leading-relaxed mb-4 ${
-                darkMode ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Tim tetap bisa mencatat rencana kerja dan realisasi di spreadsheet yang sudah biasa dipakai.
-                Sistem akan memperbarui data secara otomatis sehingga data di dashboard selalu yang paling baru.
-              </p>
-            </div>
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-              <span>Pembaruan Berkala Otomatis</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Bento Card 2: Looker Studio BI Visualizer */}
-          <div className={`p-4 sm:p-5 lg:p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-[#0f1422] border-slate-800 hover:border-blue-500/50 shadow-xs'
-              : 'bg-white border-slate-200 shadow-xs hover:border-blue-500/50 hover:shadow-sm'
-          }`}>
-            <div>
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 flex items-center justify-center mb-3">
-                <BarChart3 className="w-4 sm:w-5 h-4 sm:h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold mb-1.5 sm:mb-2">Grafik & Laporan Visual Interaktif</h3>
-              <p className={`text-xs sm:text-sm leading-relaxed mb-4 ${
-                darkMode ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Tampilkan perbandingan pengeluaran antar bulan dan antar seksi dalam grafik yang bersih dan mudah dibaca.
-                Membantu pimpinan melihat tren biaya dan mengambil keputusan rapat dengan cepat.
-              </p>
-            </div>
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-blue-600 dark:text-blue-400">
-              <span>Praktis untuk Rapat Pimpinan</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Bento Card 3: Email Alerts System */}
-          <div className={`p-4 sm:p-5 lg:p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-[#0f1422] border-slate-800 hover:border-rose-500/50 shadow-xs'
-              : 'bg-white border-slate-200 shadow-xs hover:border-rose-500/50 hover:shadow-sm'
-          }`}>
-            <div>
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 flex items-center justify-center mb-3">
-                <Mail className="w-4 sm:w-5 h-4 sm:h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold mb-1.5 sm:mb-2">Pengingat Ambang Batas Email</h3>
-              <p className={`text-xs sm:text-sm leading-relaxed mb-4 ${
-                darkMode ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Jika pengeluaran suatu seksi sudah mendekati 85% atau melampaui batas anggaran,
-                sistem otomatis mengirimkan email pengingat kepada PIC bersangkutan agar dapat segera dievaluasi.
-              </p>
-            </div>
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-rose-600 dark:text-rose-400">
-              <span>Pencegahan Dini Biaya Bengkak</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Bento Card 4: Executive Report & PDF Generation */}
-          <div className={`p-4 sm:p-5 lg:p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-[#0f1422] border-slate-800 hover:border-amber-500/50 shadow-xs'
-              : 'bg-white border-slate-200 shadow-xs hover:border-amber-500/50 hover:shadow-sm'
-          }`}>
-            <div>
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-600 flex items-center justify-center mb-3">
-                <FileCheck className="w-4 sm:w-5 h-4 sm:h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold mb-1.5 sm:mb-2">Laporan Eksekutif & Dokumen PDF</h3>
-              <p className={`text-xs sm:text-sm leading-relaxed mb-4 ${
-                darkMode ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Susun laporan pertanggungjawaban anggaran secara instan untuk Pimpinan HR Dept. dan manajemen pabrik.
-                Lengkap dengan analisis varians biaya per seksi dan ekspor berkas PDF berstandar korporat siap rapat.
-              </p>
-            </div>
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-amber-600 dark:text-amber-400">
-              <span>Dokumen Resmi Siap Cetak</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Bento Card 5: Manajemen Pengguna & Hak Akses Berjenjang */}
-          <div className={`p-4 sm:p-5 lg:p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-[#0f1422] border-slate-800 hover:border-cyan-500/50 shadow-xs'
-              : 'bg-white border-slate-200 shadow-xs hover:border-cyan-500/50 hover:shadow-sm'
-          }`}>
-            <div>
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-600 flex items-center justify-center mb-3">
-                <Users className="w-4 sm:w-5 h-4 sm:h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold mb-1.5 sm:mb-2">Manajemen Pengguna & Akses</h3>
-              <p className={`text-xs sm:text-sm leading-relaxed mb-4 ${
-                darkMode ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Kelola akun staf administrasi, kepala seksi, budget controller, hingga auditor dengan mudah.
-                Tambah atau nonaktifkan akun pengguna yang terhubung langsung ke basis data otentikasi DABACO.
-              </p>
-            </div>
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-cyan-600 dark:text-cyan-400">
-              <span>Pemisahan Wewenang Antar Seksi</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-
-          {/* Bento Card 6: Supabase & Cloud Security */}
-          <div className={`p-4 sm:p-5 lg:p-6 rounded-2xl border transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
-            darkMode
-              ? 'bg-[#0f1422] border-slate-800 hover:border-red-500/50 shadow-xs'
-              : 'bg-white border-slate-200 shadow-xs hover:border-red-500/50 hover:shadow-sm'
-          }`}>
-            <div>
-              <div className="w-9 sm:w-10 h-9 sm:h-10 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 flex items-center justify-center mb-3">
-                <ShieldCheck className="w-4 sm:w-5 h-4 sm:h-5" />
-              </div>
-              <h3 className="text-sm sm:text-base lg:text-lg font-bold mb-1.5 sm:mb-2">Penyimpanan Tertib & Hak Akses</h3>
-              <p className={`text-xs sm:text-sm leading-relaxed mb-4 ${
-                darkMode ? 'text-slate-400' : 'text-slate-600'
-              }`}>
-                Seluruh riwayat pengeluaran tersimpan rapi dengan cadangan berkala. Hak akses dibatasi sesuai peran
-                masing-masing staf untuk menjaga kerahasiaan data internal pabrik.
-              </p>
-            </div>
-            <div className="pt-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-xs font-semibold text-red-600 dark:text-red-400">
-              <span>Akses Berjenjang & Terlindungi</span>
-              <ArrowUpRight className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Architecture & Data Flow Section */}
-      <section id="architecture" className={`relative z-10 py-8 sm:py-12 border-y transition-colors ${
+      <section id="architecture" className={`relative z-10 py-12 sm:py-16 md:py-20 border-y transition-colors ${
         darkMode ? 'bg-[#0a0f1c] border-slate-800/80' : 'bg-slate-100/70 border-slate-200/90'
       }`}>
         <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
@@ -519,6 +352,68 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </button>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section id="faq" className="relative z-10 py-10 sm:py-14 md:py-18 px-4 sm:px-6 lg:px-8 max-w-4xl lg:max-w-5xl mx-auto">
+        <div className="text-center max-w-2xl mx-auto mb-7 sm:mb-10">
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-red-600 dark:text-red-500 mb-2">
+            TANYA JAWAB OPERASIONAL
+          </p>
+          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+            Pertanyaan yang Sering Diajukan (FAQ)
+          </h2>
+          <p className={`text-xs sm:text-sm md:text-base mt-2 leading-relaxed ${
+            darkMode ? 'text-slate-400' : 'text-slate-600'
+          }`}>
+            Panduan operasional dan penjelasan seputar alur kerja sistem pengendalian anggaran DABACO di Pabrik Mojokerto.
+          </p>
+        </div>
+
+        <div className="space-y-3 sm:space-y-4">
+          {faqItems.map((item, idx) => {
+            const isOpen = openFaq === idx;
+            return (
+              <div
+                key={idx}
+                className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                  darkMode
+                    ? 'bg-[#0f1422] border-slate-800 hover:border-slate-700 shadow-xs'
+                    : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-xs'
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenFaq(isOpen ? null : idx)}
+                  className="w-full px-5 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-4 text-left cursor-pointer focus:outline-hidden"
+                  aria-expanded={isOpen}
+                >
+                  <span className={`font-bold text-sm sm:text-base transition-colors ${
+                    isOpen
+                      ? 'text-red-600 dark:text-red-400'
+                      : darkMode ? 'text-slate-100' : 'text-slate-900'
+                  }`}>
+                    {item.question}
+                  </span>
+                  <div className={`p-1.5 rounded-lg transition-transform duration-200 shrink-0 ${
+                    isOpen ? 'rotate-180 text-red-600 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'
+                  }`}>
+                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </div>
+                </button>
+                {isOpen && (
+                  <div className="px-5 sm:px-6 pb-5 pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                    <p className={`text-xs sm:text-sm md:text-base leading-relaxed ${
+                      darkMode ? 'text-slate-300' : 'text-slate-600'
+                    }`}>
+                      {item.answer}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
 
