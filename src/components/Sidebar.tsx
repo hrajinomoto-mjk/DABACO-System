@@ -114,18 +114,18 @@ export const Sidebar: React.FC<SidebarProps> = ({
           className={`border-b border-slate-200/70 dark:border-slate-800/80 transition-all ${
             isCollapsed
               ? 'p-3 flex flex-col items-center gap-2.5'
-              : 'px-5 py-4 flex items-center justify-between'
+              : 'px-3.5 py-3 flex items-center justify-between gap-1.5'
           }`}
         >
           {!isCollapsed ? (
             <>
               {/* Expanded Brand Lockup */}
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="h-11 px-2.5 py-1 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-center shrink-0">
-                  <AjinomotoLogo variant="full" className="h-7 w-auto" />
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className="h-9.5 px-2 py-0.5 rounded-xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 shadow-2xs flex items-center justify-center shrink-0">
+                  <AjinomotoLogo variant="full" className="h-6 w-auto" />
                 </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 leading-none mb-1">
                     <span className="font-black tracking-tight text-base bg-gradient-to-r from-red-600 via-rose-600 to-red-700 bg-clip-text text-transparent">
                       DABACO
                     </span>
@@ -134,8 +134,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                     </span>
                   </div>
                   <p
-                    className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-[130px]"
-                    title="PT Ajinomoto Indonesia - Mojokerto Factory"
+                    className="text-[10px] font-bold text-slate-700 dark:text-slate-300 tracking-tight leading-tight whitespace-nowrap"
+                    title="PT Ajinomoto Indonesia - Pabrik Mojokerto"
                   >
                     PT Ajinomoto Indonesia
                   </p>
@@ -143,10 +143,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
               </div>
 
               {/* Header Action Buttons */}
-              <div className="flex items-center gap-1 shrink-0">
+              <div className="flex items-center gap-0.5 shrink-0">
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors relative cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors relative cursor-pointer"
                   title={darkMode ? 'Ganti ke Mode Terang (Ctrl+D)' : 'Ganti ke Mode Gelap (Ctrl+D)'}
                 >
                   {darkMode ? (
@@ -164,7 +164,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 {onToggleCollapse && (
                   <button
                     onClick={onToggleCollapse}
-                    className="hidden lg:flex p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer relative"
+                    className="hidden lg:flex p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer relative"
                     title="Perkecil Sidebar (Ctrl+B)"
                   >
                     <PanelLeftClose className="w-4 h-4" />
