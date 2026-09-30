@@ -241,19 +241,19 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Architecture & Data Flow Section */}
       <section
         id="architecture"
-        className={`relative z-10 scroll-mt-14 sm:scroll-mt-16 min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-12 sm:py-16 md:py-20 border-y transition-colors ${
+        className={`relative z-10 scroll-mt-16 sm:scroll-mt-20 py-8 sm:py-12 lg:py-14 border-y transition-colors ${
           darkMode ? 'bg-[#0a0f1c] border-slate-800/80' : 'bg-slate-100/70 border-slate-200/90'
         }`}
       >
         <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto mb-6 sm:mb-8">
+          <div className="text-center max-w-2xl mx-auto mb-5 sm:mb-7">
             <p className="text-xs font-bold uppercase tracking-wider text-red-600 dark:text-red-400">
               Alur Kerja Praktis
             </p>
             <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight mt-1">
               Empat Langkah Pengendalian Anggaran di Pabrik
             </h2>
-            <p className={`text-xs sm:text-sm mt-2 leading-relaxed ${
+            <p className={`text-xs sm:text-sm mt-1.5 leading-relaxed ${
               darkMode ? 'text-slate-400' : 'text-slate-600'
             }`}>
               Dari pencatatan nota operasional harian hingga menjadi laporan evaluasi yang siap ditinjau pimpinan pabrik.
@@ -263,55 +263,63 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           {/* Flow Columns */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 sm:gap-4 relative">
             {/* Step 1 */}
-            <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+            <div className={`p-4 sm:p-4.5 rounded-xl border transition-all flex flex-col justify-between ${
               darkMode ? 'bg-[#0f1422] border-slate-800' : 'bg-white border-slate-200 shadow-xs'
             }`}>
-              <div className="w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 font-bold flex items-center justify-center mb-2.5 text-xs">
-                01
+              <div>
+                <div className="w-7 h-7 rounded-lg bg-blue-600/10 text-blue-600 font-bold flex items-center justify-center mb-2.5 text-xs">
+                  01
+                </div>
+                <h4 className="font-bold text-sm sm:text-base mb-1">Pencatatan & Sinkronisasi</h4>
+                <p className={`text-xs sm:text-[13px] leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Staf masing-masing seksi mencatat rencana dan bukti pengeluaran melalui lembar kerja spreadsheet yang terintegrasi otomatis.
+                </p>
               </div>
-              <h4 className="font-bold text-sm sm:text-base mb-1">Pencatatan & Sinkronisasi</h4>
-              <p className={`text-xs sm:text-sm leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Staf masing-masing seksi mencatat rencana dan bukti pengeluaran melalui lembar kerja spreadsheet yang terintegrasi otomatis.
-              </p>
             </div>
 
             {/* Step 2 */}
-            <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+            <div className={`p-4 sm:p-4.5 rounded-xl border transition-all flex flex-col justify-between ${
               darkMode ? 'bg-[#0f1422] border-slate-800' : 'bg-white border-slate-200 shadow-xs'
             }`}>
-              <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 font-bold flex items-center justify-center mb-2.5 text-xs">
-                02
+              <div>
+                <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 font-bold flex items-center justify-center mb-2.5 text-xs">
+                  02
+                </div>
+                <h4 className="font-bold text-sm sm:text-base mb-1">Pemeriksaan & Validasi</h4>
+                <p className={`text-xs sm:text-[13px] leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Sistem memeriksa kesesuaian biaya dengan budget yang disetujui serta memverifikasi wewenang penanggung jawab seksi.
+                </p>
               </div>
-              <h4 className="font-bold text-sm sm:text-base mb-1">Pemeriksaan & Validasi</h4>
-              <p className={`text-xs sm:text-sm leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Sistem memeriksa kesesuaian biaya dengan budget yang disetujui serta memverifikasi wewenang penanggung jawab seksi.
-              </p>
             </div>
 
             {/* Step 3 */}
-            <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+            <div className={`p-4 sm:p-4.5 rounded-xl border transition-all flex flex-col justify-between ${
               darkMode ? 'bg-[#0f1422] border-slate-800' : 'bg-white border-slate-200 shadow-xs'
             }`}>
-              <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 font-bold flex items-center justify-center mb-2.5 text-xs">
-                03
+              <div>
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 font-bold flex items-center justify-center mb-2.5 text-xs">
+                  03
+                </div>
+                <h4 className="font-bold text-sm sm:text-base mb-1">Rangkuman Grafik & Evaluasi</h4>
+                <p className={`text-xs sm:text-[13px] leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Angka-angka dirangkum menjadi grafik perbandingan biaya yang mudah dibaca untuk rapat evaluasi bulanan.
+                </p>
               </div>
-              <h4 className="font-bold text-sm sm:text-base mb-1">Rangkuman Grafik & Evaluasi</h4>
-              <p className={`text-xs sm:text-sm leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Angka-angka dirangkum menjadi grafik perbandingan biaya yang mudah dibaca untuk rapat evaluasi bulanan.
-              </p>
             </div>
 
             {/* Step 4 */}
-            <div className={`p-4 sm:p-5 rounded-2xl border transition-all ${
+            <div className={`p-4 sm:p-4.5 rounded-xl border transition-all flex flex-col justify-between ${
               darkMode ? 'bg-[#0f1422] border-slate-800' : 'bg-white border-slate-200 shadow-xs'
             }`}>
-              <div className="w-7 h-7 rounded-lg bg-rose-600/10 text-rose-600 font-bold flex items-center justify-center mb-2.5 text-xs">
-                04
+              <div>
+                <div className="w-7 h-7 rounded-lg bg-rose-600/10 text-rose-600 font-bold flex items-center justify-center mb-2.5 text-xs">
+                  04
+                </div>
+                <h4 className="font-bold text-sm sm:text-base mb-1">Pengingat & Laporan Resmi</h4>
+                <p className={`text-xs sm:text-[13px] leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                  Pengingat email terkirim jika anggaran mendekati batas, dan laporan resmi siap dicetak atau diunduh dalam format PDF.
+                </p>
               </div>
-              <h4 className="font-bold text-sm sm:text-base mb-1">Pengingat & Laporan Resmi</h4>
-              <p className={`text-xs sm:text-sm leading-relaxed ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Pengingat email terkirim jika anggaran mendekati batas, dan laporan resmi siap dicetak atau diunduh dalam format PDF.
-              </p>
             </div>
           </div>
         </div>
@@ -320,9 +328,9 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* Security Banner & CTA Section */}
       <section
         id="security"
-        className="relative z-10 scroll-mt-14 sm:scroll-mt-16 min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-10 sm:py-14 md:py-16 px-4 sm:px-6 lg:px-8 max-w-7xl 2xl:max-w-[1600px] mx-auto w-full"
+        className="relative z-10 scroll-mt-16 sm:scroll-mt-20 py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-5xl lg:max-w-6xl mx-auto w-full"
       >
-        <div className={`rounded-2xl sm:rounded-3xl p-5 sm:p-8 md:p-10 border relative overflow-hidden text-center shadow-lg transition-all ${
+        <div className={`rounded-2xl sm:rounded-3xl p-5 sm:p-7 md:p-9 border relative overflow-hidden text-center shadow-lg transition-all ${
           darkMode
             ? 'bg-gradient-to-br from-[#131a2e] via-[#0e1424] to-[#0a0f1b] border-slate-800'
             : 'bg-gradient-to-br from-white via-rose-50/40 to-slate-50 border-slate-200/90'
@@ -331,7 +339,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
           <div className="absolute top-0 right-1/4 w-72 h-72 bg-red-600/15 rounded-full blur-3xl pointer-events-none" />
 
           <div className="relative z-10 max-w-3xl mx-auto">
-            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] sm:text-xs font-bold mb-3 sm:mb-4 max-w-full">
+            <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-3.5 py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[11px] sm:text-xs font-bold mb-2.5 sm:mb-3.5 max-w-full">
               <ShieldCheck className="w-3.5 sm:w-4 h-3.5 sm:h-4 shrink-0" />
               <span className="truncate">Sistem Pengendalian Anggaran PT Ajinomoto Indonesia &bull; Pabrik Mojokerto</span>
             </div>
@@ -340,7 +348,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               Pantau dan Kelola Anggaran Seksi Anda Lebih Mudah
             </h2>
 
-            <p className={`mt-3 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl mx-auto ${
+            <p className={`mt-2.5 sm:mt-3 text-xs sm:text-sm md:text-base leading-relaxed max-w-2xl mx-auto ${
               darkMode ? 'text-slate-300' : 'text-slate-700'
             }`}>
               Gunakan portal <strong>DABACO (Dashboard Budget Control System)</strong> dengan akun kerja Anda untuk melihat rekapitulasi pengeluaran terkini,
@@ -364,29 +372,29 @@ export const LandingPage: React.FC<LandingPageProps> = ({
       {/* FAQ Section */}
       <section
         id="faq"
-        className="relative z-10 scroll-mt-14 sm:scroll-mt-16 min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)] flex flex-col justify-center py-12 sm:py-16 md:py-20 px-4 sm:px-6 lg:px-8 max-w-4xl lg:max-w-5xl mx-auto w-full"
+        className="relative z-10 scroll-mt-16 sm:scroll-mt-20 py-8 sm:py-12 lg:py-14 px-4 sm:px-6 lg:px-8 max-w-4xl lg:max-w-5xl mx-auto w-full"
       >
-        <div className="text-center max-w-2xl mx-auto mb-7 sm:mb-10">
-          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-red-600 dark:text-red-500 mb-2">
+        <div className="text-center max-w-2xl mx-auto mb-5 sm:mb-7">
+          <p className="text-xs sm:text-sm font-bold uppercase tracking-wider text-red-600 dark:text-red-500 mb-1.5">
             TANYA JAWAB OPERASIONAL
           </p>
-          <h2 className="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight">
+          <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold tracking-tight">
             Pertanyaan yang Sering Diajukan (FAQ)
           </h2>
-          <p className={`text-xs sm:text-sm md:text-base mt-2 leading-relaxed ${
+          <p className={`text-xs sm:text-sm mt-1.5 leading-relaxed ${
             darkMode ? 'text-slate-400' : 'text-slate-600'
           }`}>
             Panduan operasional dan penjelasan seputar alur kerja sistem pengendalian anggaran DABACO di Pabrik Mojokerto.
           </p>
         </div>
 
-        <div className="space-y-3 sm:space-y-4">
+        <div className="space-y-2.5 sm:space-y-3">
           {faqItems.map((item, idx) => {
             const isOpen = openFaq === idx;
             return (
               <div
                 key={idx}
-                className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+                className={`rounded-xl border transition-all duration-200 overflow-hidden ${
                   darkMode
                     ? 'bg-[#0f1422] border-slate-800 hover:border-slate-700 shadow-xs'
                     : 'bg-white border-slate-200/90 hover:border-slate-300 shadow-xs'
@@ -395,25 +403,25 @@ export const LandingPage: React.FC<LandingPageProps> = ({
                 <button
                   type="button"
                   onClick={() => setOpenFaq(isOpen ? null : idx)}
-                  className="w-full px-5 sm:px-6 py-4 sm:py-5 flex items-center justify-between gap-4 text-left cursor-pointer focus:outline-hidden"
+                  className="w-full px-4.5 sm:px-5 py-3 sm:py-3.5 flex items-center justify-between gap-3 text-left cursor-pointer focus:outline-hidden"
                   aria-expanded={isOpen}
                 >
-                  <span className={`font-bold text-sm sm:text-base transition-colors ${
+                  <span className={`font-bold text-xs sm:text-sm md:text-[15px] transition-colors ${
                     isOpen
                       ? 'text-red-600 dark:text-red-400'
                       : darkMode ? 'text-slate-100' : 'text-slate-900'
                   }`}>
                     {item.question}
                   </span>
-                  <div className={`p-1.5 rounded-lg transition-transform duration-200 shrink-0 ${
+                  <div className={`p-1 rounded-md transition-transform duration-200 shrink-0 ${
                     isOpen ? 'rotate-180 text-red-600 dark:text-red-400' : 'text-slate-400 dark:text-slate-500'
                   }`}>
-                    <ChevronDown className="w-4 h-4 sm:w-5 sm:h-5" />
+                    <ChevronDown className="w-4 h-4" />
                   </div>
                 </button>
                 {isOpen && (
-                  <div className="px-5 sm:px-6 pb-5 pt-1 border-t border-slate-100 dark:border-slate-800/80">
-                    <p className={`text-xs sm:text-sm md:text-base leading-relaxed ${
+                  <div className="px-4.5 sm:px-5 pb-4 pt-1.5 border-t border-slate-100 dark:border-slate-800/80">
+                    <p className={`text-xs sm:text-sm leading-relaxed ${
                       darkMode ? 'text-slate-300' : 'text-slate-600'
                     }`}>
                       {item.answer}
