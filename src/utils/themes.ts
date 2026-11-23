@@ -23,8 +23,10 @@ export interface ThemeOption {
   shortName: string;
   tagline: string;
   description: string;
+  descriptionEn: string;
   mode: 'light' | 'dark';
   recommendedFor: string;
+  recommendedForEn: string;
   swatches: ThemeSwatches;
 }
 
@@ -38,8 +40,10 @@ export const SYSTEM_THEMES: ThemeOption[] = [
     shortName: 'Crimson',
     tagline: 'Corporate Flagship',
     description: 'Identitas resmi PT Ajinomoto Indonesia dengan kanvas putih bersih, kontras tajam, dan aksen merah crimson.',
+    descriptionEn: 'Official PT Ajinomoto Indonesia corporate identity featuring a crisp white canvas, sharp contrast, and crimson accents.',
     mode: 'light',
     recommendedFor: 'Operasional Harian',
+    recommendedForEn: 'Daily Operations',
     swatches: {
       bg: '#f8fafc',
       surface: '#ffffff',
@@ -57,8 +61,10 @@ export const SYSTEM_THEMES: ThemeOption[] = [
     shortName: 'Sapphire',
     tagline: 'Financial Audit & Treasury',
     description: 'Palet biru-platinum korporat yang tenang dan presisi untuk audit anggaran serta rekonsiliasi data finansial.',
+    descriptionEn: 'Calm platinum-sapphire corporate palette crafted for precision budget audits and financial reconciliation.',
     mode: 'light',
     recommendedFor: 'Audit & Keuangan',
+    recommendedForEn: 'Audit & Finance',
     swatches: {
       bg: '#f1f5fb',
       surface: '#ffffff',
@@ -76,8 +82,10 @@ export const SYSTEM_THEMES: ThemeOption[] = [
     shortName: 'Warm Ivory',
     tagline: 'Boardroom Paper',
     description: 'Kanvas gading hangat minim silau dengan aksen burgundy & tembaga emas yang nyaman untuk analisis jangka panjang.',
+    descriptionEn: 'Low-glare warm ivory paper canvas with burgundy and bronze-gold accents for extended analytical review.',
     mode: 'light',
     recommendedFor: 'Analisis & Review',
+    recommendedForEn: 'Analysis & Review',
     swatches: {
       bg: '#f6f2ea',
       surface: '#fffdf9',
@@ -95,8 +103,10 @@ export const SYSTEM_THEMES: ThemeOption[] = [
     shortName: 'Midnight',
     tagline: 'Command Center',
     description: 'Tema gelap biru-obsidian kontras tinggi dengan sorotan merah rubi untuk ruang kendali dan monitoring real-time.',
+    descriptionEn: 'High-contrast obsidian navy dark mode with ruby highlights engineered for real-time monitoring command centers.',
     mode: 'dark',
     recommendedFor: 'Monitoring Intensif',
+    recommendedForEn: 'Intensive Monitoring',
     swatches: {
       bg: '#080c14',
       surface: '#0f1624',
@@ -114,8 +124,10 @@ export const SYSTEM_THEMES: ThemeOption[] = [
     shortName: 'Emerald',
     tagline: 'Precision Treasury Dark',
     description: 'Nuansa gelap hijau-zamrud berkarakter modern dan tenang untuk analisis arus kas, proyeksi, dan efisiensi biaya.',
+    descriptionEn: 'Refined deep emerald-charcoal dark surfaces designed for cashflow analytics, forecasting, and cost efficiency.',
     mode: 'dark',
     recommendedFor: 'Treasury & Efisiensi',
+    recommendedForEn: 'Treasury & Efficiency',
     swatches: {
       bg: '#061210',
       surface: '#0b1e1b',
@@ -133,8 +145,10 @@ export const SYSTEM_THEMES: ThemeOption[] = [
     shortName: 'Obsidian Gold',
     tagline: 'Director Lounge',
     description: 'Karbon grafit matte elegan dipadukan aksen emas amber korporat dengan estetika eksklusif tingkat direksi.',
+    descriptionEn: 'Matte carbon graphite paired with warm corporate amber-gold accents for Board of Directors briefings.',
     mode: 'dark',
     recommendedFor: 'Presentasi Direksi',
+    recommendedForEn: 'Board Briefings',
     swatches: {
       bg: '#0c0c0f',
       surface: '#16161c',

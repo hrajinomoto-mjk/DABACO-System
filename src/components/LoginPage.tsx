@@ -8,8 +8,6 @@ import {
   ShieldCheck,
   AlertCircle,
   ArrowLeft,
-  Sun,
-  Moon,
   Building2,
   Zap,
   Fingerprint,
@@ -25,20 +23,38 @@ import {
 } from 'lucide-react';
 import { UserSession } from '../types';
 import { AjinomotoLogo } from './AjinomotoLogo';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { ThemePicker } from './ThemePicker';
+import { AmbientBackdrop } from './AmbientBackdrop';
+import { useLanguage } from '../contexts/LanguageContext';
+import { ThemeId, getThemeById } from '../utils/themes';
 
 interface LoginPageProps {
   onLoginSuccess: (user: Partial<UserSession>) => void;
   onBackToLanding: () => void;
   darkMode: boolean;
   setDarkMode: (val: boolean) => void;
+  activeTheme?: ThemeId;
+  onSelectTheme?: (theme: ThemeId) => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   onLoginSuccess,
   onBackToLanding,
   darkMode,
-  setDarkMode
+  setDarkMode,
+  activeTheme = (darkMode ? 'midnight-dark' : 'crimson-light') as ThemeId,
+  onSelectTheme
 }) => {
+  const { tr, locale } = useLanguage();
+  const handleSelectTheme = (themeId: ThemeId) => {
+    if (onSelectTheme) {
+      onSelectTheme(themeId);
+    } else {
+      const target = getThemeById(themeId);
+      setDarkMode(target.mode === 'dark');
+    }
+  };
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
@@ -55,7 +71,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     password: 'admin123',
     displayName: 'Ahmad Syafiq',
     dept: 'HR Development',
-    badge: 'Akses Penuh'
+    badge: tr('Akses Penuh', 'Full Access')
   };
 
   const handleCredentialSubmit = (e: React.FormEvent) => {
@@ -63,7 +79,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setError('');
 
     if (!username.trim() || !password.trim()) {
-      setError('Harap lengkapi nama pengguna dan kata sandi.');
+      setError(
+        tr(
+          'Harap lengkapi nama pengguna dan kata sandi.',
+          'Please enter both username and password.'
+        )
+      );
       return;
     }
 
@@ -84,7 +105,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         console.error('Error reading dabaco_users in LoginPage', err);
       }
 
-      const timestamp = new Date().toLocaleDateString('id-ID', {
+      const timestamp = new Date().toLocaleDateString(locale, {
         day: 'numeric',
         month: 'short',
         year: 'numeric',
@@ -94,7 +115,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
       if (matchedUser) {
         if (matchedUser.status === 'Inactive') {
-          setError('Akun ini dinonaktifkan oleh administrator. Silakan hubungi Pimpinan HR Dept. atau Helpdesk.');
+          setError(
+            tr(
+              'Akun ini dinonaktifkan oleh administrator. Silakan hubungi Pimpinan HR Dept. atau Helpdesk.',
+              'This account has been deactivated by an administrator. Please contact HR Dept. Leadership or Helpdesk.'
+            )
+          );
           return;
         }
 
@@ -123,31 +149,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           lastLogin: timestamp
         });
       } else {
-        setError('Kombinasi nama pengguna atau kata sandi tidak valid. Silakan periksa kembali.');
+        setError(
+          tr(
+            'Kombinasi nama pengguna atau kata sandi tidak valid. Silakan periksa kembali.',
+            'Invalid username or password combination. Please verify your credentials.'
+          )
+        );
       }
     }, 500);
   };
 
   return (
-    <div className={`min-h-screen lg:h-screen lg:max-h-screen w-full flex flex-col justify-between transition-colors duration-200 relative overflow-x-hidden ${
-      darkMode ? 'bg-[#080c14] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
-    }`}>
-      {/* Background Decorative Ambient Aura */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-        <div className="absolute -top-32 left-1/4 w-[500px] h-[500px] bg-red-600/10 dark:bg-red-600/[0.12] rounded-full blur-[100px] -translate-x-1/2" />
-        <div className="absolute -bottom-32 right-1/4 w-[550px] h-[550px] bg-rose-600/10 dark:bg-rose-600/[0.10] rounded-full blur-[120px] translate-x-1/2" />
-        {/* Subtle grid texture */}
-        <div
-          className="absolute inset-0 opacity-[0.025] dark:opacity-[0.04]"
-          style={{
-            backgroundImage: `radial-gradient(currentColor 1px, transparent 1px)`,
-            backgroundSize: '24px 24px'
-          }}
-        />
-      </div>
+    <div
+      data-i18n-native="true"
+      className={`min-h-screen lg:h-screen lg:max-h-screen w-full flex flex-col justify-between transition-colors duration-200 relative overflow-x-hidden dabaco-app-shell ${
+        darkMode ? 'bg-[#080c14] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
+      }`}
+    >
+      {/* Executive Architectural & Theme-Adaptive Background */}
+      <AmbientBackdrop activeTheme={activeTheme} darkMode={darkMode} variant="login" />
 
       {/* Top Header Bar */}
-      <header className={`w-full border-b backdrop-blur-xl sticky top-0 z-30 transition-colors shrink-0 ${
+      <header className={`w-full border-b backdrop-blur-xl sticky top-0 z-30 transition-colors shrink-0 dabaco-navbar ${
         darkMode ? 'bg-[#090d16]/85 border-slate-800/80' : 'bg-white/85 border-slate-200/90 shadow-xs'
       }`}>
         <div className="w-full max-w-7xl 2xl:max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 h-12 sm:h-13 flex items-center justify-between gap-2">
@@ -160,11 +183,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   ? 'border-slate-700/80 bg-slate-800/60 hover:bg-slate-800 text-slate-200 hover:text-white'
                   : 'border-slate-200 bg-white hover:bg-slate-100 text-slate-700 hover:text-slate-900 shadow-2xs'
               }`}
-              title="Kembali ke Halaman Beranda DABACO"
+              title={tr('Kembali ke Halaman Beranda DABACO', 'Back to DABACO Home Page')}
             >
-              <ArrowLeft className="w-3.5 h-3.5 shrink-0 text-red-600" />
-              <span className="hidden sm:inline">Kembali ke Beranda</span>
-              <span className="sm:hidden">Kembali</span>
+              <ArrowLeft className="w-3.5 h-3.5 shrink-0 dabaco-accent-text" />
+              <span className="hidden sm:inline">{tr('Kembali ke Beranda', 'Back to Home')}</span>
+              <span className="sm:hidden">{tr('Kembali', 'Back')}</span>
             </button>
 
             <div className="flex items-center gap-2 sm:gap-2.5 pl-2 sm:pl-2.5 border-l border-slate-200 dark:border-slate-800 min-w-0">
@@ -173,10 +196,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               </div>
               <div className="leading-tight min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-black text-xs sm:text-sm tracking-tight text-red-600 dark:text-red-500 shrink-0">
+                  <span className="font-black text-xs sm:text-sm tracking-tight shrink-0 dabaco-brand-text">
                     DABACO
                   </span>
-                  <span className="hidden md:inline-block text-[10px] font-bold px-1.5 py-0.2 rounded bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 truncate">
+                  <span className="hidden md:inline-block text-[10px] font-bold px-1.5 py-0.2 rounded border truncate dabaco-badge-accent">
                     v2.6 Enterprise
                   </span>
                 </div>
@@ -187,8 +210,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             </div>
           </div>
 
-          {/* Right actions: Help & Theme Toggle */}
+          {/* Right actions: Language, Help & 6-Theme Picker */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            <LanguageSwitcher darkMode={darkMode} />
+
             <button
               onClick={() => setShowHelpModal(true)}
               className={`hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
@@ -198,28 +223,23 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               }`}
             >
               <HelpCircle className="w-3.5 h-3.5 text-blue-500" />
-              <span>Bantuan HR</span>
+              <span>{tr('Bantuan HR', 'HR Helpdesk')}</span>
             </button>
 
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className={`p-1.5 sm:p-2 rounded-xl border transition-all cursor-pointer ${
-                darkMode
-                  ? 'bg-slate-800/70 border-slate-700/80 text-amber-400 hover:bg-slate-800'
-                  : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-100 shadow-2xs'
-              }`}
-              title={darkMode ? 'Beralih ke Light Mode' : 'Beralih ke Dark Mode'}
-              aria-label="Toggle dark mode"
-            >
-              {darkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-            </button>
+            <ThemePicker
+              compact
+              darkMode={darkMode}
+              setDarkMode={setDarkMode}
+              activeTheme={activeTheme}
+              onSelectTheme={handleSelectTheme}
+            />
           </div>
         </div>
       </header>
 
       {/* Main Responsive Container */}
       <main className="flex-1 flex items-center justify-center p-2 sm:p-3 md:p-4 lg:p-4 relative z-10 w-full min-h-0">
-        <div className={`w-full max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-5xl 2xl:max-w-[1100px] rounded-2xl border shadow-xl overflow-hidden grid grid-cols-1 lg:grid-cols-12 transition-all duration-300 ${
+        <div className={`w-full max-w-lg md:max-w-2xl lg:max-w-5xl xl:max-w-5xl 2xl:max-w-[1100px] rounded-2xl border shadow-xl backdrop-blur-md overflow-hidden grid grid-cols-1 lg:grid-cols-12 transition-all duration-300 ${
           darkMode
             ? 'bg-[#0f1422]/95 border-slate-800/90 shadow-[0_20px_60px_rgba(0,0,0,0.7)]'
             : 'bg-white/95 border-slate-200/90 shadow-[0_20px_60px_-15px_rgba(15,23,42,0.08)]'
@@ -230,8 +250,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           {/* ========================================================= */}
           <div className={`lg:col-span-5 p-3.5 sm:p-4.5 lg:p-5 xl:p-5.5 flex flex-col justify-between border-b lg:border-b-0 lg:border-r transition-colors ${
             darkMode
-              ? 'bg-gradient-to-br from-[#121829] via-[#0f1422] to-[#0a0e18] border-slate-800/90'
-              : 'bg-gradient-to-br from-rose-50/50 via-slate-50/40 to-white border-slate-200/80'
+              ? 'bg-[#0a0f1c]/75 border-slate-800/90'
+              : 'bg-slate-50/80 border-slate-200/80'
           }`}>
             <div>
               {/* Brand Emblem & Plant Badge Header */}
@@ -239,7 +259,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <div className="inline-flex h-8 sm:h-9 px-2.5 py-1 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 shadow-2xs items-center justify-center">
                   <AjinomotoLogo variant="full" className="h-5 sm:h-6 w-auto" />
                 </div>
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-red-600/10 text-red-700 dark:text-red-400 border border-red-500/20 text-[10px] font-bold">
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold dabaco-badge-accent">
                   <Building2 className="w-3 h-3 shrink-0" />
                   <span className="truncate">Mojokerto Factory</span>
                 </div>
@@ -252,8 +272,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
               {/* Main Headline */}
               <h1 className="text-base sm:text-xl lg:text-[22px] font-black tracking-tight leading-tight text-slate-900 dark:text-white">
-                Gateway Otentikasi <br className="hidden sm:inline" />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-rose-600 to-red-700 dark:from-red-500 dark:via-rose-400 dark:to-red-400">
+                {tr('Gateway Otentikasi', 'Authentication Gateway')} <br className="hidden sm:inline" />
+                <span className="dabaco-hero-gradient">
                   HR Budget Ecosystem
                 </span>
               </h1>
@@ -261,7 +281,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <p className={`mt-1 sm:mt-1.5 text-xs leading-relaxed ${
                 darkMode ? 'text-slate-300 font-normal' : 'text-slate-600 font-normal'
               }`}>
-                Portal terintegrasi kendali budget tahunan, forecasting bulanan, sinkronisasi Google Sheets, Looker Studio, dan realisasi aktual HR Development.
+                {tr(
+                  'Portal terintegrasi kendali budget tahunan, forecasting bulanan, sinkronisasi Google Sheets, Looker Studio, dan realisasi aktual HR Development.',
+                  'Integrated portal for annual budget control, monthly forecasting, Google Sheets sync, Looker Studio analytics, and HR Development actual realizations.'
+                )}
               </p>
 
               {/* Compact Security Pill Strip on Mobile / Tablets (< lg) */}
@@ -299,10 +322,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                     <div className="min-w-0">
                       <h2 className="text-[11.5px] font-bold text-slate-900 dark:text-slate-100">
-                        Otentikasi Berbasis Peran Terpadu
+                        {tr('Otentikasi Berbasis Peran Terpadu', 'Unified Role-Based Authentication')}
                       </h2>
                       <p className={`text-[10px] leading-snug mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Hak akses aman terenkripsi untuk Administrator & Tim HR Development Pabrik Mojokerto.
+                        {tr(
+                          'Hak akses aman terenkripsi untuk Administrator & Tim HR Development Pabrik Mojokerto.',
+                          'Encrypted role-scoped access for Administrators & HR Development Teams at Mojokerto Factory.'
+                        )}
                       </p>
                     </div>
                   </div>
@@ -319,10 +345,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                     <div className="min-w-0">
                       <h2 className="text-[11.5px] font-bold text-slate-900 dark:text-slate-100">
-                        Enkripsi Standar Korporat AES-256
+                        {tr('Enkripsi Standar Korporat AES-256', 'Corporate-Grade AES-256 Encryption')}
                       </h2>
                       <p className={`text-[10px] leading-snug mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Setiap transaksi, catatan penyerapan kas, dan kredensial diamankan protokol standar enterprise.
+                        {tr(
+                          'Setiap transaksi, catatan penyerapan kas, dan kredensial diamankan protokol standar enterprise.',
+                          'Every transaction, cash absorption record, and credential is protected by enterprise-grade protocols.'
+                        )}
                       </p>
                     </div>
                   </div>
@@ -339,10 +368,13 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                     <div className="min-w-0">
                       <h2 className="text-[11.5px] font-bold text-slate-900 dark:text-slate-100">
-                        Sinkronisasi Real-Time Google Sheets
+                        {tr('Sinkronisasi Real-Time Google Sheets', 'Real-Time Google Sheets Sync')}
                       </h2>
                       <p className={`text-[10px] leading-snug mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                        Koneksi data dua arah otomatis antara spreadsheet online dan analitik BI Looker Studio.
+                        {tr(
+                          'Koneksi data dua arah otomatis antara spreadsheet online dan analitik BI Looker Studio.',
+                          'Automated two-way data synchronization between online spreadsheets and Looker Studio BI analytics.'
+                        )}
                       </p>
                     </div>
                   </div>
@@ -356,9 +388,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             }`}>
               <div className="flex items-center gap-1.5 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
-                <span className="font-semibold text-slate-800 dark:text-slate-200">Sistem Aktif</span>
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {tr('Sistem Aktif', 'System Active')}
+                </span>
                 <span className="text-slate-400 dark:text-slate-600">&bull;</span>
-                <span>Node Mojokerto</span>
+                <span>{tr('Node Mojokerto', 'Mojokerto Node')}</span>
               </div>
               <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
                 TLS 1.3 Active
@@ -373,9 +407,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <div>
               {/* Card Form Header */}
               <div className="flex items-center justify-between gap-2 mb-1.5 sm:mb-2">
-                <span className="text-[10px] font-extrabold tracking-wider uppercase text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-red-600 shrink-0" />
-                  Otentikasi Kredensial Resmi
+                <span className="text-[10px] font-extrabold tracking-wider uppercase dabaco-accent-text flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0 dabaco-dot-accent" />
+                  {tr('Otentikasi Kredensial Resmi', 'Official Credential Authentication')}
                 </span>
                 <button
                   type="button"
@@ -385,15 +419,18 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   }`}
                 >
                   <HelpCircle className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                  <span>Bantuan HR</span>
+                  <span>{tr('Bantuan HR', 'HR Helpdesk')}</span>
                 </button>
               </div>
 
               <h2 className="text-base sm:text-xl lg:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                Masuk ke Akun Anda
+                {tr('Masuk ke Akun Anda', 'Sign In to Your Account')}
               </h2>
               <p className={`text-xs mt-0.5 leading-snug ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
-                Gunakan kredensial internal Ajinomoto untuk mengakses dashboard operasional DABACO.
+                {tr(
+                  'Gunakan kredensial internal Ajinomoto untuk mengakses dashboard operasional DABACO.',
+                  'Use your internal Ajinomoto credentials to access the DABACO operational dashboard.'
+                )}
               </p>
 
               {/* Authority Privilege Notice */}
@@ -402,19 +439,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   darkMode ? 'bg-slate-900/90 border-slate-800' : 'bg-slate-50 border-slate-200'
                 }`}>
                   <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
-                    <div className="w-6 sm:w-7 h-6 sm:h-7 rounded-lg bg-red-600/15 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                    <div className="w-6 sm:w-7 h-6 sm:h-7 rounded-lg dabaco-accent-soft flex items-center justify-center shrink-0">
                       <ShieldCheck className="w-3.5 h-3.5" />
                     </div>
                     <div className="min-w-0">
                       <span className="text-xs font-bold block text-slate-900 dark:text-slate-100 truncate">
-                        Otoritas Akses: Super Admin
+                        {tr('Otoritas Akses: Super Admin', 'Access Authority: Super Admin')}
                       </span>
                       <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block">
-                        HR Development &bull; Kendali Penuh Modul Anggaran
+                        {tr(
+                          'HR Development • Kendali Penuh Modul Anggaran',
+                          'HR Development • Full Budget Module Control'
+                        )}
                       </span>
                     </div>
                   </div>
-                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-red-600/10 text-red-600 dark:text-red-400 border border-red-500/20 shrink-0">
+                  <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 dabaco-badge-accent">
                     Full Privilege
                   </span>
                 </div>
@@ -435,7 +475,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   <label className={`block text-[11px] font-bold mb-1 ${
                     darkMode ? 'text-slate-200' : 'text-slate-800'
                   }`}>
-                    Username Pegawai / Email
+                    {tr('Username Pegawai / Email', 'Employee Username / Email')}
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
@@ -445,11 +485,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type="text"
                       value={username}
                       onChange={e => setUsername(e.target.value)}
-                      placeholder="contoh: admin atau paajinomoto"
-                      className={`w-full pl-9 pr-3 py-1.5 sm:py-2 text-xs rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-red-500/30 ${
+                      placeholder={tr('contoh: admin atau paajinomoto', 'e.g. admin or paajinomoto')}
+                      className={`w-full pl-9 pr-3 py-1.5 sm:py-2 text-xs rounded-xl border transition-all focus:outline-none dabaco-input-focus ${
                         darkMode
-                          ? 'bg-slate-800/90 border-slate-700 text-white placeholder-slate-500 focus:border-red-500'
-                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-red-500 shadow-2xs'
+                          ? 'bg-slate-800/90 border-slate-700 text-white placeholder-slate-500'
+                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 shadow-2xs'
                       }`}
                       autoComplete="username"
                       required
@@ -463,14 +503,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <label className={`text-[11px] font-bold ${
                       darkMode ? 'text-slate-200' : 'text-slate-800'
                     }`}>
-                      Kata Sandi
+                      {tr('Kata Sandi', 'Password')}
                     </label>
                     <button
                       type="button"
                       onClick={() => setShowHelpModal(true)}
-                      className="text-[10px] font-semibold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+                      className="text-[10px] font-semibold dabaco-accent-text hover:underline cursor-pointer"
                     >
-                      Lupa kata sandi?
+                      {tr('Lupa kata sandi?', 'Forgot password?')}
                     </button>
                   </div>
                   <div className="relative">
@@ -481,11 +521,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type={showPassword ? 'text' : 'password'}
                       value={password}
                       onChange={e => setPassword(e.target.value)}
-                      placeholder="Masukkan kata sandi Anda"
-                      className={`w-full pl-9 pr-9 py-1.5 sm:py-2 text-xs rounded-xl border transition-all focus:outline-none focus:ring-2 focus:ring-red-500/30 ${
+                      placeholder={tr('Masukkan kata sandi Anda', 'Enter your password')}
+                      className={`w-full pl-9 pr-9 py-1.5 sm:py-2 text-xs rounded-xl border transition-all focus:outline-none dabaco-input-focus ${
                         darkMode
-                          ? 'bg-slate-800/90 border-slate-700 text-white placeholder-slate-500 focus:border-red-500'
-                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 focus:border-red-500 shadow-2xs'
+                          ? 'bg-slate-800/90 border-slate-700 text-white placeholder-slate-500'
+                          : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 shadow-2xs'
                       }`}
                       autoComplete="current-password"
                       required
@@ -494,7 +534,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                      title={showPassword ? 'Sembunyikan kata sandi' : 'Tampilkan kata sandi'}
+                      title={showPassword ? tr('Sembunyikan kata sandi', 'Hide password') : tr('Tampilkan kata sandi', 'Show password')}
                       aria-label="Toggle password visibility"
                     >
                       {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
@@ -509,16 +549,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                       type="checkbox"
                       checked={rememberMe}
                       onChange={e => setRememberMe(e.target.checked)}
-                      className="rounded border-slate-300 text-red-600 focus:ring-red-500 w-3.5 h-3.5 cursor-pointer"
+                      className="rounded border-slate-300 w-3.5 h-3.5 cursor-pointer"
                     />
                     <span className={darkMode ? 'text-slate-300' : 'text-slate-700'}>
-                      Ingat sesi login saya
+                      {tr('Ingat sesi login saya', 'Remember my session')}
                     </span>
                   </label>
 
                   <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
-                    <span className="hidden sm:inline">Otoritas:</span>
-                    <span className="text-red-600 dark:text-red-400 font-extrabold">Super Admin</span>
+                    <span className="hidden sm:inline">{tr('Otoritas:', 'Authority:')}</span>
+                    <span className="dabaco-accent-text font-extrabold">Super Admin</span>
                   </span>
                 </div>
 
@@ -526,17 +566,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full h-9 sm:h-10 rounded-xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-red-600/30 hover:shadow-lg hover:shadow-red-600/40 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full h-9 sm:h-10 rounded-xl dabaco-nav-active text-white font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? (
                     <>
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                      <span>Memverifikasi Kredensial Resmi...</span>
+                      <span>{tr('Memverifikasi Kredensial Resmi...', 'Verifying Official Credentials...')}</span>
                     </>
                   ) : (
                     <>
                       <KeyRound className="w-3.5 h-3.5" />
-                      <span>Masuk ke Dashboard Sistem</span>
+                      <span>{tr('Masuk ke Dashboard Sistem', 'Sign In to System Dashboard')}</span>
                       <ChevronRight className="w-3.5 h-3.5 opacity-80" />
                     </>
                   )}
@@ -551,9 +591,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div className="flex items-center justify-between mb-1.5">
                 <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-amber-500 shrink-0" />
-                  Akses Cepat Demo Akun:
+                  {tr('Akses Cepat Demo Akun:', 'Quick Demo Account Access:')}
                 </span>
-                <span className="text-[10px] text-slate-400">Klik untuk isi instan</span>
+                <span className="text-[10px] text-slate-400">
+                  {tr('Klik untuk isi instan', 'Click to auto-fill')}
+                </span>
               </div>
 
               <button
@@ -565,16 +607,14 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 }}
                 className={`w-full p-2 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
                   username === adminAccount.username
-                    ? darkMode
-                      ? 'bg-red-500/10 border-red-500/40 text-red-300'
-                      : 'bg-red-50 border-red-200 text-red-700'
+                    ? 'dabaco-badge-accent'
                     : darkMode
                     ? 'bg-slate-800/50 border-slate-700/60 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
                     : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center gap-2 min-w-0">
-                  <div className="w-6 h-6 rounded-lg bg-red-600/15 text-red-600 dark:text-red-400 flex items-center justify-center font-bold text-[11px] shrink-0">
+                  <div className="w-6 h-6 rounded-lg dabaco-accent-soft flex items-center justify-center font-bold text-[11px] shrink-0">
                     SA
                   </div>
                   <div className="min-w-0">
@@ -586,8 +626,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                   </div>
                 </div>
-                <span className="text-[9px] font-semibold px-2 py-0.5 rounded bg-red-600 text-white shrink-0 ml-2">
-                  Isi Kredensial
+                <span className="text-[9px] font-semibold px-2 py-0.5 rounded dabaco-nav-active text-white shrink-0 ml-2">
+                  {tr('Isi Kredensial', 'Fill Credentials')}
                 </span>
               </button>
 
@@ -624,7 +664,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               onClick={() => setShowHelpModal(false)}
               className="absolute top-4 right-4 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-              aria-label="Tutup modal"
+              aria-label={tr('Tutup modal', 'Close modal')}
             >
               <X className="w-5 h-5" />
             </button>
@@ -634,13 +674,20 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <HelpCircle className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-extrabold">Bantuan HR & Kredensial</h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400">Layanan Helpdesk HR Pabrik Mojokerto</p>
+                <h3 className="text-base font-extrabold">
+                  {tr('Bantuan HR & Kredensial', 'HR Support & Credentials')}
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  {tr('Layanan Helpdesk HR Pabrik Mojokerto', 'Mojokerto Factory HR Helpdesk Service')}
+                </p>
               </div>
             </div>
 
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-4">
-              Untuk pemulihan kata sandi, pembuatan akun staf baru, atau otorisasi hak akses modul DABACO, silakan hubungi saluran resmi HR berikut:
+              {tr(
+                'Untuk pemulihan kata sandi, pembuatan akun staf baru, atau otorisasi hak akses modul DABACO, silakan hubungi saluran resmi HR berikut:',
+                'For password recovery, new staff account provisioning, or DABACO module access authorization, please contact the official HR channels below:'
+              )}
             </p>
 
             <div className="space-y-2.5 mb-5">
@@ -649,7 +696,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               }`}>
                 <Phone className="w-4 h-4 text-red-600 shrink-0" />
                 <div>
-                  <span className="font-bold block">Telepon Internal / PABX:</span>
+                  <span className="font-bold block">{tr('Telepon Internal / PABX:', 'Internal Phone / PABX:')}</span>
                   <span className="text-slate-500 dark:text-slate-400">Ext. 2411 / 2412 (HR Helpdesk Factory)</span>
                 </div>
               </div>
@@ -659,7 +706,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               }`}>
                 <Mail className="w-4 h-4 text-red-600 shrink-0" />
                 <div>
-                  <span className="font-bold block">Email Resmi:</span>
+                  <span className="font-bold block">{tr('Email Resmi:', 'Official Email:')}</span>
                   <span className="text-slate-500 dark:text-slate-400 font-mono">hr.helpdesk@ajinomoto.co.id</span>
                 </div>
               </div>
@@ -669,22 +716,28 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               }`}>
                 <Clock className="w-4 h-4 text-red-600 shrink-0" />
                 <div>
-                  <span className="font-bold block">Jam Layanan:</span>
-                  <span className="text-slate-500 dark:text-slate-400">Senin - Jumat: 08.00 - 17.00 WIB</span>
+                  <span className="font-bold block">{tr('Jam Layanan:', 'Service Hours:')}</span>
+                  <span className="text-slate-500 dark:text-slate-400">
+                    {tr('Senin - Jumat: 08.00 - 17.00 WIB', 'Monday – Friday: 08:00 – 17:00 WIB')}
+                  </span>
                 </div>
               </div>
             </div>
 
             <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-[11px] text-amber-700 dark:text-amber-300 leading-relaxed mb-5">
-              💡 <strong>Tips Demo:</strong> Anda dapat menggunakan akun default <strong>admin / admin123</strong> untuk peran Super Admin tanpa perlu registrasi tambahan.
+              <strong>{tr('Tips Demo:', 'Demo Tip:')}</strong>{' '}
+              {tr(
+                'Anda dapat menggunakan akun default admin / admin123 untuk peran Super Admin tanpa perlu registrasi tambahan.',
+                'You can use the default admin / admin123 account for the Super Admin role without additional registration.'
+              )}
             </div>
 
             <button
               type="button"
               onClick={() => setShowHelpModal(false)}
-              className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-500 text-white text-xs font-bold transition-colors cursor-pointer"
+              className="w-full py-2.5 rounded-xl dabaco-nav-active text-white text-xs font-bold transition-colors cursor-pointer"
             >
-              Tutup Panduan
+              {tr('Tutup Panduan', 'Close Guide')}
             </button>
           </div>
         </div>

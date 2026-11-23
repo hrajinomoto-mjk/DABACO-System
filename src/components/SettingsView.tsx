@@ -27,17 +27,21 @@ import {
   BarChart3,
   Database,
   Save,
-  Palette
+  Palette,
+  Globe
 } from 'lucide-react';
 import { MasterCostCenter, MasterItem, BudgetRecord, ForecastRecord, RealizationRecord } from '../types';
 import { createEncryptedBackup } from '../utils/encryption';
 import { SYSTEM_THEMES, ThemeId, getThemeById } from '../utils/themes';
+import { useLanguage } from '../contexts/LanguageContext';
+import { SUPPORTED_LANGUAGES, Language } from '../utils/i18n';
 
 interface SettingsViewProps {
   darkMode: boolean;
   setDarkMode: (dark: boolean) => void;
   activeTheme?: ThemeId;
   onSelectTheme?: (theme: ThemeId) => void;
+  onLanguageChange?: (lang: Language) => void;
   costCenters: MasterCostCenter[];
   onAddCostCenter?: (cc: MasterCostCenter) => void;
   onEditCostCenter?: (cc: MasterCostCenter) => void;
@@ -82,6 +86,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   setDarkMode,
   activeTheme = (darkMode ? 'midnight-dark' : 'crimson-light') as ThemeId,
   onSelectTheme,
+  onLanguageChange,
   costCenters,
   onAddCostCenter,
   onEditCostCenter,
@@ -93,6 +98,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   forecastData = [],
   realizationData = []
 }) => {
+  const { language, setLanguage, tr } = useLanguage();
   const currentTheme = getThemeById(activeTheme);
   // Credentials state
   const [username, setUsername] = useState('admin');
@@ -294,7 +300,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner */}
-      <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div
+        data-i18n-native="true"
+        className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+      >
         <div>
           <div className="flex items-center gap-2.5">
             <span className="p-2 rounded-xl bg-red-600/10 text-red-600 dark:text-red-400">
@@ -302,10 +311,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </span>
             <div>
               <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                Pengaturan Sistem & Kebijakan Anggaran
+                {tr('Pengaturan Sistem & Kebijakan Anggaran', 'System Settings & Budget Policy')}
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                Konfigurasi parameter fiskal Ajinomoto, master cost center pabrik riil, enkripsi data, dan integritas sistem.
+                {tr(
+                  'Konfigurasi bahasa sistem, tema korporat, parameter fiskal Ajinomoto, master cost center pabrik riil, dan keamanan.',
+                  'Configure enterprise language, corporate visual theme, Ajinomoto fiscal parameters, master cost centers, and security.'
+                )}
               </p>
             </div>
           </div>
@@ -324,16 +336,141 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-            <span>{darkMode ? 'Mode Terang' : 'Mode Gelap'}</span>
+            <span>{darkMode ? tr('Mode Terang', 'Light Mode') : tr('Mode Gelap', 'Dark Mode')}</span>
           </button>
         </div>
       </div>
 
       {/* ========================================================= */}
-      {/* SECTION 0: TEMA & IDENTITAS VISUAL SISTEM                 */}
+      {/* SECTION 0A: BAHASA SISTEM (FULL ENTERPRISE LOCALIZATION)  */}
+      {/* ========================================================= */}
+      <div
+        data-i18n-native="true"
+        className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5"
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl text-white flex items-center justify-center shadow-md shrink-0 dabaco-avatar-accent">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
+                {tr('Bahasa Sistem & Lokalisasi Enterprise', 'System Language & Enterprise Localization')}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {tr(
+                  'Beralih penuh antara Bahasa Indonesia dan English Corporate di seluruh halaman, modul pelaporan, dan format tanggal.',
+                  'Switch seamlessly between Bahasa Indonesia and Corporate English across all modules, reports, and date formats.'
+                )}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-center">
+            <span className="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 dabaco-badge-accent">
+              <span className="w-2 h-2 rounded-full dabaco-dot-accent" />
+              {language === 'en' ? 'Active: English (EN)' : 'Aktif: Bahasa Indonesia (ID)'}
+            </span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {SUPPORTED_LANGUAGES.map((langOpt) => {
+            const isSelected = language === langOpt.code;
+            const sampleDate = new Date().toLocaleDateString(langOpt.locale, {
+              weekday: 'long',
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric'
+            });
+            return (
+              <button
+                key={langOpt.code}
+                type="button"
+                onClick={() => {
+                  if (langOpt.code !== language) {
+                    setLanguage(langOpt.code);
+                    if (onLanguageChange) onLanguageChange(langOpt.code);
+                  }
+                }}
+                className={`text-left p-4 rounded-2xl border transition-all duration-200 cursor-pointer flex flex-col gap-3 ${
+                  isSelected
+                    ? darkMode
+                      ? 'bg-slate-800/70 border-slate-500 shadow-lg'
+                      : 'bg-slate-50/90 border-slate-400 shadow-md'
+                    : darkMode
+                    ? 'bg-slate-950/40 border-slate-800 hover:border-slate-600 hover:bg-slate-800/40'
+                    : 'bg-slate-50/40 border-slate-200 hover:border-slate-300 hover:bg-white hover:shadow-xs'
+                }`}
+                style={
+                  isSelected
+                    ? {
+                        borderColor: currentTheme.swatches.accent,
+                        boxShadow: `0 0 0 2px ${currentTheme.swatches.accent}33`
+                      }
+                    : undefined
+                }
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-11 h-11 rounded-xl font-black text-sm flex items-center justify-center shrink-0 border ${
+                        isSelected
+                          ? 'dabaco-nav-active text-white border-transparent'
+                          : darkMode
+                          ? 'bg-slate-800 border-slate-700 text-slate-200'
+                          : 'bg-white border-slate-200 text-slate-800'
+                      }`}
+                    >
+                      {langOpt.shortLabel}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
+                        {langOpt.nativeName}
+                      </h4>
+                      <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                        {langOpt.region} &bull; Locale <span className="font-mono">{langOpt.locale}</span>
+                      </p>
+                    </div>
+                  </div>
+
+                  {isSelected ? (
+                    <span
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold text-white shrink-0"
+                      style={{ backgroundColor: currentTheme.swatches.accent }}
+                    >
+                      <Check className="w-3 h-3" />
+                      {tr('Aktif', 'Active')}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-slate-200/70 dark:bg-slate-800 text-slate-600 dark:text-slate-300 shrink-0">
+                      {tr('Pilih', 'Select')}
+                    </span>
+                  )}
+                </div>
+
+                <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                  {language === 'en' ? langOpt.descriptionEn : langOpt.descriptionId}
+                </p>
+
+                <div className="pt-2.5 border-t border-slate-200/70 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold">{tr('Format Tanggal:', 'Date Format:')}</span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{sampleDate}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ========================================================= */}
+      {/* SECTION 0B: TEMA & IDENTITAS VISUAL SISTEM                */}
       {/* ========================================================= */}
       {onSelectTheme && (
-        <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+        <div
+          data-i18n-native="true"
+          className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5"
+        >
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
             <div className="flex items-center gap-3">
               <div
@@ -343,10 +480,13 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </div>
               <div>
                 <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
-                  Tema & Identitas Visual Sistem
+                  {tr('Tema & Identitas Visual Sistem', 'System Visual Themes & Identity')}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Pilih konsep tampilan korporat sesuai kenyamanan kerja, sesi audit keuangan, maupun presentasi direksi.
+                  {tr(
+                    'Pilih konsep tampilan korporat sesuai kenyamanan kerja, sesi audit keuangan, maupun presentasi direksi.',
+                    'Choose a corporate theme concept suited for daily operations, financial audits, or board presentations.'
+                  )}
                 </p>
               </div>
             </div>
@@ -354,7 +494,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center gap-2 self-start sm:self-center">
               <span className="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 dabaco-badge-accent">
                 <span className="w-2 h-2 rounded-full dabaco-dot-accent" />
-                Aktif: {currentTheme.name}
+                {tr('Aktif:', 'Active:')} {currentTheme.name}
               </span>
             </div>
           </div>
@@ -531,7 +671,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           style={{ backgroundColor: theme.swatches.accent }}
                         >
                           <Check className="w-3 h-3" />
-                          Aktif
+                          {tr('Aktif', 'Active')}
                         </span>
                       ) : (
                         <span
@@ -546,7 +686,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                           ) : (
                             <Sun className="w-2.5 h-2.5" />
                           )}
-                          {theme.mode === 'dark' ? 'Gelap' : 'Terang'}
+                          {theme.mode === 'dark' ? tr('Gelap', 'Dark') : tr('Terang', 'Light')}
                         </span>
                       )}
                     </div>
@@ -554,11 +694,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                       <span>{theme.tagline}</span>
                       <span>&bull;</span>
-                      <span>{theme.recommendedFor}</span>
+                      <span>{language === 'en' ? theme.recommendedForEn : theme.recommendedFor}</span>
                     </div>
 
                     <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
-                      {theme.description}
+                      {language === 'en' ? theme.descriptionEn : theme.description}
                     </p>
                   </div>
                 </button>

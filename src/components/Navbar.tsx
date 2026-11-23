@@ -19,6 +19,9 @@ import {
 import { ActiveTab } from './Sidebar';
 import { AlertNotification } from '../types';
 import { SYSTEM_THEMES, ThemeId, getThemeById } from '../utils/themes';
+import { LanguageSwitcher } from './LanguageSwitcher';
+import { useLanguage } from '../contexts/LanguageContext';
+import { Language } from '../utils/i18n';
 
 interface NavbarProps {
   activeTab: ActiveTab;
@@ -32,6 +35,7 @@ interface NavbarProps {
   setDarkMode?: (dark: boolean) => void;
   activeTheme?: ThemeId;
   onSelectTheme?: (theme: ThemeId) => void;
+  onLanguageChange?: (lang: Language) => void;
   isSidebarCollapsed?: boolean;
   onLogout?: () => void;
   isAltPressed?: boolean;
@@ -59,6 +63,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   setDarkMode,
   activeTheme = (darkMode ? 'midnight-dark' : 'crimson-light') as ThemeId,
   onSelectTheme,
+  onLanguageChange,
   isSidebarCollapsed = false,
   onLogout,
   isAltPressed = false,
@@ -68,6 +73,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenSupabase,
   dbSyncStatus = 'connected'
 }) => {
+  const { language, locale, tr } = useLanguage();
   const [timeString, setTimeString] = useState('');
   const [dateString, setDateString] = useState('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
@@ -78,13 +84,13 @@ export const Navbar: React.FC<NavbarProps> = ({
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      setTimeString(now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
-      setDateString(now.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }));
+      setTimeString(now.toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false }));
+      setDateString(now.toLocaleDateString(locale, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }));
     };
     updateTime();
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
-  }, []);
+  }, [locale]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -104,79 +110,79 @@ export const Navbar: React.FC<NavbarProps> = ({
     switch (tab) {
       case 'dashboard':
         return {
-          title: 'Dashboard Operasional',
+          title: tr('Dashboard Operasional', 'Operational Dashboard'),
           category: 'Strategic & Executive',
-          subtitle: 'Monitoring Realisasi & Alokasi Budget Finansial'
+          subtitle: tr('Monitoring Realisasi & Alokasi Budget Finansial', 'Financial Budget Allocation & Realization Monitoring')
         };
       case 'executive-report':
         return {
           title: 'Top Management Report',
           category: 'Strategic & Executive',
-          subtitle: 'Laporan Finansial Komprehensif Direksi & Efisiensi Biaya'
+          subtitle: tr('Laporan Finansial Komprehensif Direksi & Efisiensi Biaya', 'Comprehensive Board Financial Report & Cost Efficiency')
         };
       case 'budget':
         return {
-          title: 'Rencana Anggaran (Budget Plan)',
+          title: tr('Rencana Anggaran (Budget Plan)', 'Annual Budget Plan'),
           category: 'Core Financials',
-          subtitle: 'Target Alokasi Biaya Pelatihan & Rekrutmen'
+          subtitle: tr('Target Alokasi Biaya Pelatihan & Rekrutmen', 'Training & Recruitment Cost Allocation Targets')
         };
       case 'forecast':
         return {
-          title: 'Proyeksi Anggaran (Forecast)',
+          title: tr('Proyeksi Anggaran (Forecast)', 'Budget Forecast'),
           category: 'Core Financials',
-          subtitle: 'Estimasi Kebutuhan Finansial Periode Berjalan'
+          subtitle: tr('Estimasi Kebutuhan Finansial Periode Berjalan', 'Rolling Period Financial Requirement Estimates')
         };
       case 'realization':
         return {
-          title: 'Realisasi Kas Aktual',
+          title: tr('Realisasi Kas Aktual', 'Actual Cash Realization'),
           category: 'Core Financials',
-          subtitle: 'Pencatatan Transaksi & Pengeluaran Nyata'
+          subtitle: tr('Pencatatan Transaksi & Pengeluaran Nyata', 'Transaction Ledger & Actual Expenditure Tracking')
         };
       case 'looker':
         return {
           title: 'Business Intelligence (BI)',
           category: 'Analytics & Insights',
-          subtitle: 'Visualisasi Grafik Tren & Analisis Variansi'
+          subtitle: tr('Visualisasi Grafik Tren & Analisis Variansi', 'Trend Visualization & Variance Analytics')
         };
       case 'sheets-sync':
         return {
           title: 'Google Sheets Sync',
           category: 'Integrations',
-          subtitle: 'Sinkronisasi Dua Arah Data Spreadsheet Online'
+          subtitle: tr('Sinkronisasi Dua Arah Data Spreadsheet Online', 'Two-Way Online Spreadsheet Synchronization')
         };
       case 'email-alerts':
         return {
           title: 'Email Alerts & Monitoring',
           category: 'Early Warning System',
-          subtitle: 'Notifikasi Otomatis Ambang Batas Pengeluaran'
+          subtitle: tr('Notifikasi Otomatis Ambang Batas Pengeluaran', 'Automated Expenditure Threshold Notifications')
         };
       case 'users':
         return {
-          title: 'Manajemen Pengguna',
+          title: tr('Manajemen Pengguna', 'User Management'),
           category: 'Governance & Security',
-          subtitle: 'Hak Akses Akun & Otorisasi Finansial'
+          subtitle: tr('Hak Akses Akun & Otorisasi Finansial', 'Account Access Control & Financial Authorization')
         };
       case 'banking':
         return {
-          title: 'Integrasi Rekening Bank',
+          title: tr('Integrasi Rekening Bank', 'Corporate Banking Integration'),
           category: 'Corporate Treasury',
-          subtitle: 'Koneksi Rekening Operasional & Arus Kas'
+          subtitle: tr('Koneksi Rekening Operasional & Arus Kas', 'Operational Account & Cashflow Connectivity')
         };
       case 'supabase':
         return {
           title: 'Supabase Database Backend',
           category: 'Cloud Infrastructure',
-          subtitle: 'Penyimpanan Terpusat, RLS & Cadangan Data'
+          subtitle: tr('Penyimpanan Terpusat, RLS & Cadangan Data', 'Centralized Storage, RLS & Data Backup')
         };
       case 'settings':
         return {
-          title: 'Pengaturan Sistem',
+          title: tr('Pengaturan Sistem', 'System Settings'),
           category: 'Configuration',
-          subtitle: 'Preferensi Aplikasi, Parameter & Keamanan'
+          subtitle: tr('Preferensi Aplikasi, Parameter & Keamanan', 'Application Preferences, Policy & Security')
         };
       default:
         return {
-          title: 'Sistem Pengendalian Anggaran',
+          title: tr('Sistem Pengendalian Anggaran', 'Budget Control System'),
           category: 'DABACO System',
           subtitle: 'PT Ajinomoto Indonesia'
         };
@@ -191,6 +197,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header
+      data-i18n-native="true"
       className={`fixed top-0 right-0 left-0 ${
         isSidebarCollapsed ? 'lg:left-20' : 'lg:left-72'
       } z-30 border-b backdrop-blur-md transition-all duration-300 ease-in-out dabaco-navbar ${
@@ -202,7 +209,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {/* Seamless Top Accent Line matching Sidebar */}
       <div className="h-1 w-full dabaco-top-accent" />
 
-      <div className="h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 md:gap-4">
+      <div className="h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-2.5 md:gap-4">
 
         {/* ========================================================= */}
         {/* LEFT ZONE: Mobile Menu + Single-Line Clean Title & Badge  */}
@@ -223,7 +230,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* Context & Title Block */}
           <div className="min-w-0 flex items-center gap-2 sm:gap-2.5 overflow-hidden">
-            <h1 className={`text-base sm:text-lg lg:text-xl font-black tracking-tight truncate shrink-0 max-w-[240px] sm:max-w-[320px] md:max-w-none ${
+            <h1 className={`text-base sm:text-lg lg:text-xl font-black tracking-tight truncate shrink-0 max-w-[200px] sm:max-w-[300px] md:max-w-none ${
               darkMode ? 'text-white' : 'text-slate-900'
             }`}>
               {meta.title}
@@ -265,11 +272,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-emerald-500/10 border-emerald-500/25 text-emerald-400 hover:bg-emerald-500/20'
                   : 'bg-emerald-50/80 border-emerald-200/80 text-emerald-700 hover:bg-emerald-100'
               }`}
-              title="Sinkronisasi data dengan Google Sheets & Database (Ctrl+S)"
+              title={tr('Sinkronisasi data dengan Google Sheets & Database (Ctrl+S)', 'Sync data with Google Sheets & Database (Ctrl+S)')}
             >
               <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
-              <span className="font-bold">
-                {isSyncing ? 'Syncing...' : 'Live Synced'}
+              <span className="font-bold hidden sm:inline">
+                {isSyncing ? tr('Syncing...', 'Syncing...') : 'Live Synced'}
               </span>
               {isAltPressed && (
                 <span className="hidden sm:inline-block px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-xs animate-bounce">
@@ -290,7 +297,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'bg-slate-800/80 border-slate-700/80 text-slate-200 hover:bg-slate-800 hover:border-emerald-500/40 hover:text-emerald-400'
                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:border-emerald-500/40 hover:text-emerald-600 shadow-2xs'
                 }`}
-                title="Push seluruh data budget, forecast, dan realisasi ke Supabase"
+                title={tr('Push seluruh data budget, forecast, dan realisasi ke Supabase', 'Push all budget, forecast, and realization datasets to Supabase')}
               >
                 <UploadCloud className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isPushingSupabase ? 'animate-bounce' : ''}`} />
                 <span>{isPushingSupabase ? 'Pushing...' : 'Push DB'}</span>
@@ -308,15 +315,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'bg-amber-500/10 border-amber-500/25 text-amber-500 hover:bg-amber-500/20'
                     : 'bg-slate-800/80 border-slate-700 text-slate-400 hover:text-slate-200'
                 }`}
-                title="Status Supabase Database. Klik untuk membuka konfigurasi Supabase."
+                title={tr('Status Supabase Database. Klik untuk membuka konfigurasi Supabase.', 'Supabase Database status. Click to open Supabase settings.')}
               >
                 <Database className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                 <span>
-                  {dbSyncStatus === 'connected' ? 'Cloud DB' : dbSyncStatus === 'empty' ? 'DB Kosong' : 'Database'}
+                  {dbSyncStatus === 'connected'
+                    ? 'Cloud DB'
+                    : dbSyncStatus === 'empty'
+                    ? tr('DB Kosong', 'Empty DB')
+                    : 'Database'}
                 </span>
               </button>
             )}
           </div>
+
+          {/* Enterprise ID | EN Language Switcher */}
+          <LanguageSwitcher darkMode={darkMode} onLanguageChange={onLanguageChange} />
 
           {/* Divider */}
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
@@ -337,7 +351,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'hover:bg-slate-700/70 text-slate-300 hover:text-amber-400'
                     : 'hover:bg-white text-slate-600 hover:text-amber-600 hover:shadow-2xs'
                 }`}
-                title="Panduan Pintasan Keyboard (Tekan ?)"
+                title={tr('Panduan Pintasan Keyboard (Tekan ?)', 'Keyboard Shortcuts Guide (Press ?)')}
               >
                 <Keyboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500 dark:text-amber-400" />
                 {isAltPressed && (
@@ -365,8 +379,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                       ? 'hover:bg-slate-700/70 text-slate-300 hover:text-white'
                       : 'hover:bg-white text-slate-700 hover:shadow-2xs'
                   }`}
-                  title={`Tema Aktif: ${currentThemeObj.name} — Klik untuk ganti tema`}
-                  aria-label="Pilih Tema Tampilan"
+                  title={tr(
+                    `Tema Aktif: ${currentThemeObj.name} — Klik untuk ganti tema`,
+                    `Active Theme: ${currentThemeObj.name} — Click to switch theme`
+                  )}
+                  aria-label={tr('Pilih Tema Tampilan', 'Choose Interface Theme')}
                 >
                   <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <span
@@ -387,14 +404,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <div>
                         <p className="text-xs font-extrabold tracking-tight flex items-center gap-1.5">
                           <Palette className="w-3.5 h-3.5" style={{ color: currentThemeObj.swatches.accent }} />
-                          <span>Tema Tampilan Sistem</span>
+                          <span>{tr('Tema Tampilan Sistem', 'System Visual Themes')}</span>
                         </p>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
-                          Aktif: <span className="font-bold">{currentThemeObj.name}</span>
+                          {tr('Aktif:', 'Active:')} <span className="font-bold">{currentThemeObj.name}</span>
                         </p>
                       </div>
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-md dabaco-badge-accent border">
-                        {SYSTEM_THEMES.length} Konsep
+                        {SYSTEM_THEMES.length} {tr('Konsep', 'Themes')}
                       </span>
                     </div>
 
@@ -402,7 +419,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div className="mb-2.5">
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1 mb-1.5 flex items-center gap-1">
                         <Sun className="w-3 h-3 text-amber-500" />
-                        Mode Terang (Light)
+                        {tr('Mode Terang (Light)', 'Light Mode')}
                       </p>
                       <div className="space-y-1">
                         {lightThemes.map(theme => {
@@ -426,7 +443,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
-                                {/* Swatch preview */}
                                 <div
                                   className="w-9 h-7 rounded-lg border overflow-hidden flex shrink-0 shadow-2xs"
                                   style={{ backgroundColor: theme.swatches.bg, borderColor: theme.swatches.border }}
@@ -443,7 +459,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 <div className="min-w-0">
                                   <p className="text-xs font-bold leading-tight truncate">{theme.name}</p>
                                   <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                                    {theme.tagline} &bull; {theme.recommendedFor}
+                                    {theme.tagline} &bull; {language === 'en' ? theme.recommendedForEn : theme.recommendedFor}
                                   </p>
                                 </div>
                               </div>
@@ -465,7 +481,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     <div>
                       <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1 mb-1.5 flex items-center gap-1">
                         <Moon className="w-3 h-3 text-indigo-400" />
-                        Mode Gelap (Dark)
+                        {tr('Mode Gelap (Dark)', 'Dark Mode')}
                       </p>
                       <div className="space-y-1">
                         {darkThemes.map(theme => {
@@ -489,7 +505,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                               }`}
                             >
                               <div className="flex items-center gap-2.5 min-w-0">
-                                {/* Swatch preview */}
                                 <div
                                   className="w-9 h-7 rounded-lg border overflow-hidden flex shrink-0 shadow-2xs"
                                   style={{ backgroundColor: theme.swatches.bg, borderColor: theme.swatches.border }}
@@ -506,7 +521,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                                 <div className="min-w-0">
                                   <p className="text-xs font-bold leading-tight truncate">{theme.name}</p>
                                   <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
-                                    {theme.tagline} &bull; {theme.recommendedFor}
+                                    {theme.tagline} &bull; {language === 'en' ? theme.recommendedForEn : theme.recommendedFor}
                                   </p>
                                 </div>
                               </div>
@@ -537,7 +552,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'hover:bg-slate-700/70 text-amber-400'
                     : 'hover:bg-white text-slate-700 hover:shadow-2xs'
                 }`}
-                title={darkMode ? 'Beralih ke Mode Terang (Ctrl+D)' : 'Beralih ke Mode Gelap (Ctrl+D)'}
+                title={
+                  darkMode
+                    ? tr('Beralih ke Mode Terang (Ctrl+D)', 'Switch to Light Mode (Ctrl+D)')
+                    : tr('Beralih ke Mode Gelap (Ctrl+D)', 'Switch to Dark Mode (Ctrl+D)')
+                }
               >
                 {darkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 {isAltPressed && (
@@ -556,7 +575,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'hover:bg-slate-700/70 text-slate-300 hover:text-white'
                   : 'hover:bg-white text-slate-600 hover:text-slate-900 hover:shadow-2xs'
               }`}
-              title="Lihat peringatan anggaran (Alt+8)"
+              title={tr('Lihat peringatan anggaran (Alt+8)', 'View budget alerts (Alt+8)')}
             >
               <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               {unreadAlerts.length > 0 && (
@@ -582,7 +601,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
             <span className="text-[10px] font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1 mt-1 leading-none">
               <Calendar className="w-2.5 h-2.5 opacity-70" />
-              {dateString || 'Senin, 14 Sep 2026'}
+              {dateString || 'Mon, 14 Sep 2026'}
             </span>
           </div>
 
@@ -627,7 +646,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">paajinomoto@gmail.com</p>
                   <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-md">
                     <CheckCircle2 className="w-2.5 h-2.5" />
-                    Sesi Aktif &bull; Role Controller
+                    {tr('Sesi Aktif • Role Controller', 'Active Session • Controller Role')}
                   </div>
                 </div>
 
@@ -640,7 +659,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer mt-1"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>Keluar / Ganti Akun</span>
+                    <span>{tr('Keluar / Ganti Akun', 'Sign Out / Switch Account')}</span>
                   </button>
                 )}
               </div>

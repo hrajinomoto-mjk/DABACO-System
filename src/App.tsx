@@ -30,6 +30,8 @@ import {
   getThemeById,
   isValidThemeId
 } from './utils/themes';
+import { useLanguage } from './contexts/LanguageContext';
+import { Language } from './utils/i18n';
 
 import {
   INITIAL_BUDGET,
@@ -89,6 +91,7 @@ const loadPersistentData = <T,>(key: string, fallback: T): T => {
 };
 
 export default function App() {
+  const { tr } = useLanguage();
   // Page Routing & Authentication State
   // Required flow: When system is opened, system directly opens Landing Page -> Login Page -> Dashboard System
   const [currentPage, setCurrentPage] = useState<'landing' | 'login' | 'workspace'>('landing');
@@ -154,8 +157,21 @@ export default function App() {
       localStorage.setItem('dabaco_last_light_theme', selected.id);
     }
     if (!silent) {
-      showToast(`Tema "${selected.name}" diterapkan (${selected.tagline})`);
+      showToast(
+        tr(
+          `Tema "${selected.name}" diterapkan (${selected.tagline})`,
+          `Theme "${selected.name}" applied (${selected.tagline})`
+        )
+      );
     }
+  };
+
+  const handleLanguageChange = (lang: Language) => {
+    showToast(
+      lang === 'en'
+        ? 'System language switched to English (Corporate Enterprise)'
+        : 'Bahasa sistem diubah ke Bahasa Indonesia'
+    );
   };
 
   const setDarkMode = (valOrUpdater: boolean | ((prev: boolean) => boolean)) => {
@@ -884,7 +900,7 @@ export default function App() {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('dabaco-open-pdf-modal'));
         }, 80);
-        showToast('Membuka Generator Executive PDF Report (Ctrl+P)');
+        showToast(tr('Membuka Generator Executive PDF Report (Ctrl+P)', 'Opening Executive PDF Report Generator (Ctrl+P)'));
         return;
       }
 
@@ -892,7 +908,7 @@ export default function App() {
       if (isCtrlOrMeta && key === 'b') {
         e.preventDefault();
         handleToggleSidebarCollapse();
-        showToast('Sidebar dialihkan (Ctrl+B)');
+        showToast(tr('Sidebar dialihkan (Ctrl+B)', 'Sidebar toggled (Ctrl+B)'));
         return;
       }
 
@@ -900,7 +916,7 @@ export default function App() {
       if (isCtrlOrMeta && key === 'd') {
         e.preventDefault();
         setDarkMode(prev => !prev);
-        showToast('Mode tema dialihkan (Ctrl+D)');
+        showToast(tr('Mode tema dialihkan (Ctrl+D)', 'Theme mode toggled (Ctrl+D)'));
         return;
       }
 
@@ -940,7 +956,12 @@ export default function App() {
           }
           setActiveTab(targetTab);
           const tabLabel = targetTab.replace('-', ' ').toUpperCase();
-          showToast(`Navigasi: ${tabLabel} (${isCtrlOrMeta ? 'Ctrl+' : 'Alt+'}${e.key})`);
+          showToast(
+            tr(
+              `Navigasi: ${tabLabel} (${isCtrlOrMeta ? 'Ctrl+' : 'Alt+'}${e.key})`,
+              `Navigated: ${tabLabel} (${isCtrlOrMeta ? 'Ctrl+' : 'Alt+'}${e.key})`
+            )
+          );
         }
         return;
       }
@@ -965,7 +986,7 @@ export default function App() {
       window.removeEventListener('keyup', handleKeyUp);
       window.removeEventListener('blur', handleBlur);
     };
-  }, [currentPage, budget, forecast, realization]);
+  }, [currentPage, budget, forecast, realization, tr]);
 
   return (
     <div className={`min-h-screen transition-colors duration-200 dabaco-app-shell ${
@@ -1000,6 +1021,8 @@ export default function App() {
           onOpenLogin={() => setCurrentPage('login')}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
+          activeTheme={activeTheme}
+          onSelectTheme={handleSelectTheme}
           budgetData={budget}
           forecastData={forecast}
           realizationData={realization}
@@ -1014,6 +1037,8 @@ export default function App() {
           onBackToLanding={() => setCurrentPage('landing')}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
+          activeTheme={activeTheme}
+          onSelectTheme={handleSelectTheme}
         />
       )}
 
@@ -1049,6 +1074,7 @@ export default function App() {
               setDarkMode={setDarkMode}
               activeTheme={activeTheme}
               onSelectTheme={handleSelectTheme}
+              onLanguageChange={handleLanguageChange}
               isSidebarCollapsed={isSidebarCollapsed}
               onLogout={handleRequestLogout}
               isAltPressed={isAltPressed}
@@ -1061,11 +1087,18 @@ export default function App() {
 
             {/* Top Database Status Alert / Empty Notification */}
             {dbSyncStatus === 'empty' && activeTab !== 'supabase' && (
-              <div className="mx-4 sm:mx-6 mt-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+              <div
+                data-i18n-native="true"
+                className="mx-4 sm:mx-6 mt-4 p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm"
+              >
                 <div className="flex items-center gap-2.5">
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping shrink-0" />
                   <span>
-                    <strong>Database Supabase Terhubung:</strong> Tabel database masih kosong. Klik <em>&quot;Push Data Sekarang&quot;</em> untuk mengunggah dataset awal ke Supabase.
+                    <strong>{tr('Database Supabase Terhubung:', 'Supabase Database Connected:')}</strong>{' '}
+                    {tr(
+                      'Tabel database masih kosong. Klik "Push Data Sekarang" untuk mengunggah dataset awal ke Supabase.',
+                      'Database tables are currently empty. Click "Push Data Now" to upload the initial dataset to Supabase.'
+                    )}
                   </span>
                 </div>
                 <button
@@ -1073,7 +1106,9 @@ export default function App() {
                   disabled={isPushingToSupabase}
                   className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-xs transition cursor-pointer self-start sm:self-auto shrink-0 disabled:opacity-50"
                 >
-                  {isPushingToSupabase ? 'Sedang Push...' : 'Push Data Sekarang'}
+                  {isPushingToSupabase
+                    ? tr('Sedang Push...', 'Pushing...')
+                    : tr('Push Data Sekarang', 'Push Data Now')}
                 </button>
               </div>
             )}
@@ -1229,6 +1264,7 @@ export default function App() {
                   setDarkMode={setDarkMode}
                   activeTheme={activeTheme}
                   onSelectTheme={handleSelectTheme}
+                  onLanguageChange={handleLanguageChange}
                   costCenters={costCenters}
                   onAddCostCenter={handleAddCostCenter}
                   onEditCostCenter={handleEditCostCenter}

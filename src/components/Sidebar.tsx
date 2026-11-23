@@ -21,6 +21,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { AjinomotoLogo } from './AjinomotoLogo';
+import { useLanguage } from '../contexts/LanguageContext';
 
 export type ActiveTab =
   | 'dashboard'
@@ -63,6 +64,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onToggleCollapse,
   isAltPressed = false
 }) => {
+  const { tr } = useLanguage();
+
   const navItems: Array<{
     id: ActiveTab;
     label: string;
@@ -70,17 +73,17 @@ export const Sidebar: React.FC<SidebarProps> = ({
     badge?: number;
     section?: string;
   }> = [
-    { id: 'dashboard', label: 'Dashboard Operasional', icon: LayoutDashboard },
+    { id: 'dashboard', label: tr('Dashboard Operasional', 'Operational Dashboard'), icon: LayoutDashboard },
     { id: 'executive-report', label: 'Top Management Report', icon: Award, section: 'Strategic & Executive' },
-    { id: 'budget', label: 'Budget Plan', icon: Wallet, section: 'Core Financials' },
+    { id: 'budget', label: tr('Budget Plan', 'Budget Plan'), icon: Wallet, section: 'Core Financials' },
     { id: 'forecast', label: 'Forecast', icon: TrendingUp },
-    { id: 'realization', label: 'Realization', icon: ReceiptText },
+    { id: 'realization', label: tr('Realization', 'Realization'), icon: ReceiptText },
     { id: 'looker', label: 'Business Intelligence (BI)', icon: BarChart3, section: 'Integrations & Analytics' },
     { id: 'sheets-sync', label: 'Google Sheets Sync', icon: FileSpreadsheet },
     { id: 'email-alerts', label: 'Email Alerts', icon: Mail, badge: unreadAlertsCount },
-    { id: 'users', label: 'Manajemen Pengguna', icon: Users, section: 'Architecture & Security' },
+    { id: 'users', label: tr('Manajemen Pengguna', 'User Management'), icon: Users, section: 'Architecture & Security' },
     { id: 'supabase', label: 'Supabase Backend', icon: Database },
-    { id: 'settings', label: 'System Settings', icon: Settings }
+    { id: 'settings', label: tr('System Settings', 'System Settings'), icon: Settings }
   ];
 
   return (
@@ -96,6 +99,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Main Sidebar Container */}
       <aside
+        data-i18n-native="true"
         className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col transition-all duration-300 ease-in-out lg:translate-x-0 select-none dabaco-sidebar ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } ${
@@ -147,7 +151,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={() => setDarkMode(!darkMode)}
                   className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 transition-colors relative cursor-pointer"
-                  title={darkMode ? 'Ganti ke Mode Terang (Ctrl+D)' : 'Ganti ke Mode Gelap (Ctrl+D)'}
+                  title={
+                    darkMode
+                      ? tr('Ganti ke Mode Terang (Ctrl+D)', 'Switch to Light Mode (Ctrl+D)')
+                      : tr('Ganti ke Mode Gelap (Ctrl+D)', 'Switch to Dark Mode (Ctrl+D)')
+                  }
                 >
                   {darkMode ? (
                     <Sun className="w-4 h-4 text-amber-400" />
@@ -165,7 +173,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <button
                     onClick={onToggleCollapse}
                     className="hidden lg:flex p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer relative"
-                    title="Perkecil Sidebar (Ctrl+B)"
+                    title={tr('Perkecil Sidebar (Ctrl+B)', 'Collapse Sidebar (Ctrl+B)')}
                   >
                     <PanelLeftClose className="w-4 h-4" />
                     {isAltPressed && (
@@ -241,7 +249,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </p>
                 <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 truncate flex items-center gap-1.5 mt-0.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
-                  HR Development &bull; Sesi Aktif
+                  {tr('HR Development • Sesi Aktif', 'HR Development • Active Session')}
                 </p>
               </div>
             </>
@@ -373,7 +381,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:text-white hover:bg-gradient-to-r hover:from-rose-600 hover:to-red-700 transition-all cursor-pointer shadow-xs border border-rose-200 dark:border-rose-900/40"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Keluar / Ganti Akun</span>
+                <span>{tr('Keluar / Ganti Akun', 'Sign Out / Switch Account')}</span>
               </button>
             </>
           ) : (
@@ -394,7 +402,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   onClick={() => setDarkMode(!darkMode)}
                   className="p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-950 dark:hover:text-slate-100 transition-colors cursor-pointer flex items-center justify-center"
-                  title={darkMode ? 'Ganti ke Mode Terang' : 'Ganti ke Mode Gelap'}
+                  title={darkMode ? tr('Ganti ke Mode Terang', 'Switch to Light Mode') : tr('Ganti ke Mode Gelap', 'Switch to Dark Mode')}
                 >
                   {darkMode ? (
                     <Sun className="w-4 h-4 text-amber-400" />
@@ -403,7 +411,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   )}
                 </button>
                 <div className="absolute left-full ml-3 px-3 py-1.5 rounded-2xl bg-slate-950 text-white text-xs font-semibold shadow-2xl border border-slate-800 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
-                  {darkMode ? 'Mode Terang' : 'Mode Gelap'}
+                  {darkMode ? tr('Mode Terang', 'Light Mode') : tr('Mode Gelap', 'Dark Mode')}
                 </div>
               </div>
 
@@ -413,12 +421,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   type="button"
                   onClick={onLogout}
                   className="p-2.5 rounded-2xl text-rose-600 dark:text-rose-400 hover:text-white hover:bg-rose-600 transition-colors cursor-pointer flex items-center justify-center border border-rose-200/50 dark:border-rose-900/40"
-                  title="Keluar / Ganti Akun"
+                  title={tr('Keluar / Ganti Akun', 'Sign Out / Switch Account')}
                 >
                   <LogOut className="w-4 h-4" />
                 </button>
                 <div className="absolute left-full ml-3 px-3 py-1.5 rounded-2xl bg-slate-950 text-white text-xs font-semibold shadow-2xl border border-slate-800 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
-                  Keluar / Ganti Akun
+                  {tr('Keluar / Ganti Akun', 'Sign Out / Switch Account')}
                 </div>
               </div>
             </>
