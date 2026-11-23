@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { Language, translateTextToEnglish } from '../utils/i18n';
+import { Language, translateTextToEnglish, translateTextToIndonesian } from '../utils/i18n';
 
 interface LanguageContextValue {
   language: Language;
@@ -51,7 +51,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const toggleLanguage = useCallback(() => {
-    setLanguageState(prev => {
+    setLanguageState((prev) => {
       const next: Language = prev === 'id' ? 'en' : 'id';
       try {
         localStorage.setItem(STORAGE_KEY, next);
@@ -69,23 +69,26 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     [language]
   );
 
-  // Sync <html lang="..."> attribute
+  // Sync <html lang="..."> and document title
   useEffect(() => {
     document.documentElement.lang = language;
+    document.title =
+      language === 'en'
+        ? 'DABACO — Enterprise Budget Control System | PT Ajinomoto Indonesia'
+        : 'DABACO — Sistem Pengendalian Anggaran | PT Ajinomoto Indonesia';
   }, [language]);
 
-  // Layer 2: React-safe enterprise phrase synchronizer for deep operational views & modals
+  // Layer 2: React-safe bidirectional enterprise DOM synchronizer for deep operational views, charts & modals
   useEffect(() => {
     const root = document.getElementById('root');
     if (!root) return;
 
-    // Store originals globally on window symbol-like refs so switching ID <-> EN is lossless across renders
-    const globalStore = (window as unknown as {
+    const globalStore = window as unknown as {
       __dabacoI18nTextOrig?: WeakMap<Text, string>;
       __dabacoI18nTextWritten?: WeakMap<Text, string>;
       __dabacoI18nAttrOrig?: WeakMap<Element, Record<string, string>>;
       __dabacoI18nAttrWritten?: WeakMap<Element, Record<string, string>>;
-    });
+    };
 
     if (!globalStore.__dabacoI18nTextOrig) globalStore.__dabacoI18nTextOrig = new WeakMap();
     if (!globalStore.__dabacoI18nTextWritten) globalStore.__dabacoI18nTextWritten = new WeakMap();
@@ -100,6 +103,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const TRANSLATABLE_ATTRS = ['placeholder', 'title', 'aria-label'];
     let isMutating = false;
 
+    const translateForTarget = (source: string, targetLang: Language): string => {
+      return targetLang === 'en'
+        ? translateTextToEnglish(source)
+        : translateTextToIndonesian(source);
+    };
+
     const processElementAttrs = (el: Element, targetLang: Language) => {
       if (shouldSkipElement(el)) return;
       for (const attr of TRANSLATABLE_ATTRS) {
@@ -109,25 +118,27 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         let origRecord = attrOrig.get(el);
         let writtenRecord = attrWritten.get(el);
 
-        if (targetLang === 'en') {
-          if (!origRecord) {
-            origRecord = {};
-            attrOrig.set(el, origRecord);
-          }
-          if (!writtenRecord) {
-            writtenRecord = {};
-            attrWritten.set(el, writtenRecord);
-          }
-          if (writtenRecord[attr] !== currentVal) {
-            origRecord[attr] = currentVal;
-          }
-          const translated = translateTextToEnglish(origRecord[attr]);
-          if (translated !== currentVal) {
-            writtenRecord[attr] = translated;
-            el.setAttribute(attr, translated);
-          }
-        } else if (origRecord && origRecord[attr] !== undefined && writtenRecord?.[attr] === currentVal) {
-          el.setAttribute(attr, origRecord[attr]);
+        if (!origRecord) {
+          origRecord = {};
+          attrOrig.set(el, origRecord);
+        }
+        if (!writtenRecord) {
+          writtenRecord = {};
+          attrWritten.set(el, writtenRecord);
+        }
+
+        // If React updated the attribute directly, capture the fresh canonical source
+        if (writtenRecord[attr] !== currentVal) {
+          origRecord[attr] = currentVal;
+        }
+
+        const canonical = origRecord[attr] ?? currentVal;
+        const translated = translateForTarget(canonical, targetLang);
+
+        if (translated !== currentVal) {
+          writtenRecord[attr] = translated;
+          el.setAttribute(attr, translated);
+        } else if (translated === canonical && writtenRecord[attr] !== undefined) {
           delete writtenRecord[attr];
         }
       }
@@ -138,24 +149,20 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       const currentVal = node.nodeValue || '';
       if (!currentVal.trim()) return;
 
-      if (targetLang === 'en') {
-        const lastWritten = textWritten.get(node);
-        if (lastWritten !== currentVal) {
-          textOrig.set(node, currentVal);
-        }
-        const source = textOrig.get(node) ?? currentVal;
-        const translated = translateTextToEnglish(source);
-        if (translated !== currentVal) {
-          textWritten.set(node, translated);
-          node.nodeValue = translated;
-        }
-      } else {
-        const orig = textOrig.get(node);
-        const lastWritten = textWritten.get(node);
-        if (orig !== undefined && lastWritten === currentVal) {
-          node.nodeValue = orig;
-          textWritten.delete(node);
-        }
+      const lastWritten = textWritten.get(node);
+      // If React updated the text node directly, record the fresh canonical source
+      if (lastWritten !== currentVal) {
+        textOrig.set(node, currentVal);
+      }
+
+      const canonical = textOrig.get(node) ?? currentVal;
+      const translated = translateForTarget(canonical, targetLang);
+
+      if (translated !== currentVal) {
+        textWritten.set(node, translated);
+        node.nodeValue = translated;
+      } else if (translated === canonical && textWritten.has(node)) {
+        textWritten.delete(node);
       }
     };
 
@@ -169,7 +176,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           const el = container as Element;
           if (!shouldSkipElement(el)) {
             processElementAttrs(el, targetLang);
-            const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+            const walker = document.createTreeWalker(
+              el,
+              NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT
+            );
             let current = walker.nextNode();
             while (current) {
               if (current.nodeType === Node.TEXT_NODE) {
@@ -186,14 +196,15 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
-    // Initial sync pass
+    // Immediate sync pass + delayed sweep for async chart/modal renders
     walkAndSync(root, language);
+    const settleTimer = window.setTimeout(() => {
+      if (document.contains(root)) {
+        walkAndSync(root, language);
+      }
+    }, 120);
 
-    if (language !== 'en') {
-      return;
-    }
-
-    // Observe dynamic route/tab/modal updates while in English mode
+    // Observe dynamic route/tab/modal/attribute/chart updates in BOTH ID and EN modes
     let rafId: number | null = null;
     const pendingNodes = new Set<Node>();
 
@@ -203,17 +214,17 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       pendingNodes.clear();
       for (const n of nodes) {
         if (document.contains(n)) {
-          walkAndSync(n, 'en');
+          walkAndSync(n, language);
         }
       }
     };
 
-    const observer = new MutationObserver(mutations => {
+    const observer = new MutationObserver((mutations) => {
       if (isMutating) return;
       for (const m of mutations) {
         if (m.type === 'childList') {
-          m.addedNodes.forEach(node => pendingNodes.add(node));
-        } else if (m.type === 'characterData') {
+          m.addedNodes.forEach((node) => pendingNodes.add(node));
+        } else if (m.type === 'characterData' || m.type === 'attributes') {
           pendingNodes.add(m.target);
         }
       }
@@ -225,10 +236,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     observer.observe(root, {
       childList: true,
       subtree: true,
-      characterData: true
+      characterData: true,
+      attributes: true,
+      attributeFilter: TRANSLATABLE_ATTRS
     });
 
     return () => {
+      window.clearTimeout(settleTimer);
       observer.disconnect();
       if (rafId !== null) window.cancelAnimationFrame(rafId);
     };

@@ -168,7 +168,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               <p className={`text-[11px] font-medium hidden md:block truncate ${
                 darkMode ? 'text-slate-400' : 'text-slate-600'
               }`}>
-                PT Ajinomoto Indonesia &bull; PT Ajinex International, Mojokerto Factory
+                {tr(
+                  'PT Ajinomoto Indonesia • PT Ajinex International, Pabrik Mojokerto',
+                  'PT Ajinomoto Indonesia • PT Ajinex International, Mojokerto Factory'
+                )}
               </p>
             </div>
           </div>

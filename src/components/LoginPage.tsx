@@ -204,7 +204,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   </span>
                 </div>
                 <span className="text-[10px] text-slate-500 dark:text-slate-400 truncate block font-medium">
-                  PT Ajinomoto Indonesia &bull; Mojokerto Factory
+                  PT Ajinomoto Indonesia &bull; {tr('Pabrik Mojokerto', 'Mojokerto Factory')}
                 </span>
               </div>
             </div>
@@ -261,7 +261,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 </div>
                 <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[10px] font-bold dabaco-badge-accent">
                   <Building2 className="w-3 h-3 shrink-0" />
-                  <span className="truncate">Mojokerto Factory</span>
+                  <span className="truncate">{tr('Pabrik Mojokerto', 'Mojokerto Factory')}</span>
                 </div>
               </div>
 
@@ -293,7 +293,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   darkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-white border-slate-200/80 shadow-2xs'
                 }`}>
                   <ShieldCheck className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                  <span className="text-[9.5px] font-bold text-slate-800 dark:text-slate-200 leading-tight">Role Access</span>
+                  <span className="text-[9.5px] font-bold text-slate-800 dark:text-slate-200 leading-tight">{tr('Akses Peran', 'Role Access')}</span>
                 </div>
                 <div className={`p-1.5 rounded-xl border flex flex-col items-center text-center gap-0.5 ${
                   darkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-white border-slate-200/80 shadow-2xs'
@@ -305,7 +305,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   darkMode ? 'bg-slate-800/40 border-slate-700/60' : 'bg-white border-slate-200/80 shadow-2xs'
                 }`}>
                   <Zap className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-                  <span className="text-[9.5px] font-bold text-slate-800 dark:text-slate-200 leading-tight">Sync Sheets</span>
+                  <span className="text-[9.5px] font-bold text-slate-800 dark:text-slate-200 leading-tight">{tr('Sinkron Sheets', 'Sync Sheets')}</span>
                 </div>
               </div>
 
@@ -395,7 +395,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 <span>{tr('Node Mojokerto', 'Mojokerto Node')}</span>
               </div>
               <span className="font-mono text-[9px] px-1.5 py-0.5 rounded bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-bold">
-                TLS 1.3 Active
+                {tr('TLS 1.3 Aktif', 'TLS 1.3 Active')}
               </span>
             </div>
           </div>
@@ -455,7 +455,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     </div>
                   </div>
                   <span className="text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 dabaco-badge-accent">
-                    Full Privilege
+                    {tr('Akses Penuh', 'Full Privilege')}
                   </span>
                 </div>
               </div>
@@ -635,7 +635,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
               <div className="mt-1.5 flex items-center justify-between text-[9px] text-slate-400">
                 <span className="flex items-center gap-1 truncate">
                   <CheckCircle2 className="w-3 h-3 text-emerald-500 shrink-0" />
-                  Internal Network &bull; ISO 27001
+                  {tr('Jaringan Internal • ISO 27001', 'Internal Network • ISO 27001')}
                 </span>
                 <span className="font-mono text-[9px] shrink-0">PT AI - MOJOKERTO</span>
               </div>
@@ -649,7 +649,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         darkMode ? 'border-slate-800/80 text-slate-400 bg-[#080c14]/90' : 'border-slate-200 text-slate-500 bg-white/70'
       }`}>
         <p className="font-medium text-[10px] sm:text-[11px]">
-          PT Ajinomoto Indonesia &bull; PT Ajinex International, Mojokerto Factory &bull; DABACO Budget Control System &copy; {new Date().getFullYear()}
+          PT Ajinomoto Indonesia &bull; PT Ajinex International, {tr('Pabrik Mojokerto', 'Mojokerto Factory')} &bull; DABACO Budget Control System &copy; {new Date().getFullYear()}
         </p>
       </footer>
 

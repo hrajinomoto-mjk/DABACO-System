@@ -31,7 +31,7 @@ import {
   isValidThemeId
 } from './utils/themes';
 import { useLanguage } from './contexts/LanguageContext';
-import { Language } from './utils/i18n';
+import { Language, translateText } from './utils/i18n';
 
 import {
   INITIAL_BUDGET,
@@ -91,7 +91,11 @@ const loadPersistentData = <T,>(key: string, fallback: T): T => {
 };
 
 export default function App() {
-  const { tr } = useLanguage();
+  const { language, tr } = useLanguage();
+  const languageRef = React.useRef<Language>(language);
+  useEffect(() => {
+    languageRef.current = language;
+  }, [language]);
   // Page Routing & Authentication State
   // Required flow: When system is opened, system directly opens Landing Page -> Login Page -> Dashboard System
   const [currentPage, setCurrentPage] = useState<'landing' | 'login' | 'workspace'>('landing');
@@ -167,11 +171,17 @@ export default function App() {
   };
 
   const handleLanguageChange = (lang: Language) => {
-    showToast(
-      lang === 'en'
-        ? 'System language switched to English (Corporate Enterprise)'
-        : 'Bahasa sistem diubah ke Bahasa Indonesia'
-    );
+    languageRef.current = lang;
+    setToast({
+      message:
+        lang === 'en'
+          ? 'System language switched to English (Corporate Enterprise)'
+          : 'Bahasa sistem diubah ke Bahasa Indonesia',
+      type: 'success'
+    });
+    setTimeout(() => {
+      setToast(null);
+    }, 3500);
   };
 
   const setDarkMode = (valOrUpdater: boolean | ((prev: boolean) => boolean)) => {
@@ -538,7 +548,8 @@ export default function App() {
   }, [activeTheme, darkMode]);
 
   const showToast = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
-    setToast({ message, type });
+    const localizedMessage = translateText(message, languageRef.current);
+    setToast({ message: localizedMessage, type });
     setTimeout(() => {
       setToast(null);
     }, 3500);
@@ -1008,7 +1019,7 @@ export default function App() {
                 onClick={() => setShowRlsFixModal(true)}
                 className="px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/30 text-white text-[11px] font-bold underline shrink-0 transition"
               >
-                Solusi RLS
+                {tr('Solusi RLS', 'Fix RLS')}
               </button>
             )}
           </div>

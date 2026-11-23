@@ -74,16 +74,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
     section?: string;
   }> = [
     { id: 'dashboard', label: tr('Dashboard Operasional', 'Operational Dashboard'), icon: LayoutDashboard },
-    { id: 'executive-report', label: 'Top Management Report', icon: Award, section: 'Strategic & Executive' },
-    { id: 'budget', label: tr('Budget Plan', 'Budget Plan'), icon: Wallet, section: 'Core Financials' },
-    { id: 'forecast', label: 'Forecast', icon: TrendingUp },
-    { id: 'realization', label: tr('Realization', 'Realization'), icon: ReceiptText },
-    { id: 'looker', label: 'Business Intelligence (BI)', icon: BarChart3, section: 'Integrations & Analytics' },
+    { id: 'executive-report', label: tr('Laporan Direksi', 'Top Management Report'), icon: Award, section: tr('Strategis & Eksekutif', 'Strategic & Executive') },
+    { id: 'budget', label: tr('Rencana Anggaran', 'Budget Plan'), icon: Wallet, section: tr('Keuangan Inti', 'Core Financials') },
+    { id: 'forecast', label: tr('Proyeksi (Forecast)', 'Forecast'), icon: TrendingUp },
+    { id: 'realization', label: tr('Realisasi Kas', 'Realization'), icon: ReceiptText },
+    { id: 'looker', label: tr('Analitik BI (Looker)', 'Business Intelligence (BI)'), icon: BarChart3, section: tr('Integrasi & Analitik', 'Integrations & Analytics') },
     { id: 'sheets-sync', label: 'Google Sheets Sync', icon: FileSpreadsheet },
-    { id: 'email-alerts', label: 'Email Alerts', icon: Mail, badge: unreadAlertsCount },
-    { id: 'users', label: tr('Manajemen Pengguna', 'User Management'), icon: Users, section: 'Architecture & Security' },
+    { id: 'email-alerts', label: tr('Notifikasi Email', 'Email Alerts'), icon: Mail, badge: unreadAlertsCount },
+    { id: 'users', label: tr('Manajemen Pengguna', 'User Management'), icon: Users, section: tr('Arsitektur & Keamanan', 'Architecture & Security') },
     { id: 'supabase', label: 'Supabase Backend', icon: Database },
-    { id: 'settings', label: tr('System Settings', 'System Settings'), icon: Settings }
+    { id: 'settings', label: tr('Pengaturan Sistem', 'System Settings'), icon: Settings }
   ];
 
   return (
@@ -191,7 +191,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800 flex items-center justify-center p-1.5 cursor-pointer shadow-sm group relative hover:border-red-500/40 transition-all"
                 onClick={onToggleCollapse}
-                title="PT Ajinomoto Indonesia - Klik untuk memperluas (Ctrl+B)"
+                title={tr('PT Ajinomoto Indonesia - Klik untuk memperluas (Ctrl+B)', 'PT Ajinomoto Indonesia - Click to expand (Ctrl+B)')}
               >
                 <AjinomotoLogo variant="full" className="h-5 w-auto max-w-full" />
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-red-600 rounded-full ring-2 ring-white dark:ring-slate-900" />
@@ -206,7 +206,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <button
                   onClick={onToggleCollapse}
                   className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-500 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-all cursor-pointer relative"
-                  title="Perluas Sidebar (Ctrl+B)"
+                  title={tr('Perluas Sidebar (Ctrl+B)', 'Expand Sidebar (Ctrl+B)')}
                 >
                   <PanelLeftOpen className="w-4 h-4" />
                   {isAltPressed && (
@@ -371,7 +371,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
               {/* Security Status Card */}
               <div className="flex items-center gap-2.5 px-3 py-2 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[11px] font-semibold">
                 <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-                <span className="truncate font-bold">End-to-End SSL Encryption On</span>
+                <span className="truncate font-bold">
+                  {tr('Enkripsi SSL End-to-End Aktif', 'End-to-End SSL Encryption On')}
+                </span>
               </div>
 
               {/* Logout Button */}
@@ -392,7 +394,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <ShieldCheck className="w-4 h-4 text-emerald-500" />
                 </div>
                 <div className="absolute left-full ml-3 px-3 py-1.5 rounded-2xl bg-slate-950 text-white text-xs font-semibold shadow-2xl border border-slate-800 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity z-50 whitespace-nowrap">
-                  End-to-End SSL Encryption On
+                  {tr('Enkripsi SSL End-to-End Aktif', 'End-to-End SSL Encryption On')}
                 </div>
               </div>
 

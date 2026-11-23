@@ -111,79 +111,79 @@ export const Navbar: React.FC<NavbarProps> = ({
       case 'dashboard':
         return {
           title: tr('Dashboard Operasional', 'Operational Dashboard'),
-          category: 'Strategic & Executive',
+          category: tr('Strategis & Eksekutif', 'Strategic & Executive'),
           subtitle: tr('Monitoring Realisasi & Alokasi Budget Finansial', 'Financial Budget Allocation & Realization Monitoring')
         };
       case 'executive-report':
         return {
-          title: 'Top Management Report',
-          category: 'Strategic & Executive',
+          title: tr('Laporan Manajemen Puncak', 'Top Management Report'),
+          category: tr('Strategis & Eksekutif', 'Strategic & Executive'),
           subtitle: tr('Laporan Finansial Komprehensif Direksi & Efisiensi Biaya', 'Comprehensive Board Financial Report & Cost Efficiency')
         };
       case 'budget':
         return {
           title: tr('Rencana Anggaran (Budget Plan)', 'Annual Budget Plan'),
-          category: 'Core Financials',
+          category: tr('Keuangan Inti', 'Core Financials'),
           subtitle: tr('Target Alokasi Biaya Pelatihan & Rekrutmen', 'Training & Recruitment Cost Allocation Targets')
         };
       case 'forecast':
         return {
           title: tr('Proyeksi Anggaran (Forecast)', 'Budget Forecast'),
-          category: 'Core Financials',
+          category: tr('Keuangan Inti', 'Core Financials'),
           subtitle: tr('Estimasi Kebutuhan Finansial Periode Berjalan', 'Rolling Period Financial Requirement Estimates')
         };
       case 'realization':
         return {
           title: tr('Realisasi Kas Aktual', 'Actual Cash Realization'),
-          category: 'Core Financials',
+          category: tr('Keuangan Inti', 'Core Financials'),
           subtitle: tr('Pencatatan Transaksi & Pengeluaran Nyata', 'Transaction Ledger & Actual Expenditure Tracking')
         };
       case 'looker':
         return {
-          title: 'Business Intelligence (BI)',
-          category: 'Analytics & Insights',
+          title: tr('Analitik BI (Looker)', 'Business Intelligence (BI)'),
+          category: tr('Analitik & Wawasan', 'Analytics & Insights'),
           subtitle: tr('Visualisasi Grafik Tren & Analisis Variansi', 'Trend Visualization & Variance Analytics')
         };
       case 'sheets-sync':
         return {
           title: 'Google Sheets Sync',
-          category: 'Integrations',
+          category: tr('Integrasi', 'Integrations'),
           subtitle: tr('Sinkronisasi Dua Arah Data Spreadsheet Online', 'Two-Way Online Spreadsheet Synchronization')
         };
       case 'email-alerts':
         return {
-          title: 'Email Alerts & Monitoring',
-          category: 'Early Warning System',
+          title: tr('Notifikasi Email & Monitoring', 'Email Alerts & Monitoring'),
+          category: tr('Sistem Peringatan Dini', 'Early Warning System'),
           subtitle: tr('Notifikasi Otomatis Ambang Batas Pengeluaran', 'Automated Expenditure Threshold Notifications')
         };
       case 'users':
         return {
           title: tr('Manajemen Pengguna', 'User Management'),
-          category: 'Governance & Security',
+          category: tr('Tata Kelola & Keamanan', 'Governance & Security'),
           subtitle: tr('Hak Akses Akun & Otorisasi Finansial', 'Account Access Control & Financial Authorization')
         };
       case 'banking':
         return {
           title: tr('Integrasi Rekening Bank', 'Corporate Banking Integration'),
-          category: 'Corporate Treasury',
+          category: tr('Perbendaharaan Korporat', 'Corporate Treasury'),
           subtitle: tr('Koneksi Rekening Operasional & Arus Kas', 'Operational Account & Cashflow Connectivity')
         };
       case 'supabase':
         return {
           title: 'Supabase Database Backend',
-          category: 'Cloud Infrastructure',
+          category: tr('Infrastruktur Cloud', 'Cloud Infrastructure'),
           subtitle: tr('Penyimpanan Terpusat, RLS & Cadangan Data', 'Centralized Storage, RLS & Data Backup')
         };
       case 'settings':
         return {
           title: tr('Pengaturan Sistem', 'System Settings'),
-          category: 'Configuration',
+          category: tr('Konfigurasi', 'Configuration'),
           subtitle: tr('Preferensi Aplikasi, Parameter & Keamanan', 'Application Preferences, Policy & Security')
         };
       default:
         return {
           title: tr('Sistem Pengendalian Anggaran', 'Budget Control System'),
-          category: 'DABACO System',
+          category: tr('Sistem DABACO', 'DABACO System'),
           subtitle: 'PT Ajinomoto Indonesia'
         };
     }
@@ -239,7 +239,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="hidden lg:flex items-center gap-1.5 shrink-0">
               <span className="inline-flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-md border whitespace-nowrap dabaco-badge-accent">
                 <span className="w-1.5 h-1.5 rounded-full animate-pulse dabaco-dot-accent" />
-                Mojokerto Factory
+                {tr('Pabrik Mojokerto', 'Mojokerto Factory')}
               </span>
               <span className="hidden 2xl:inline text-slate-300 dark:text-slate-700 font-normal">|</span>
               <span className={`hidden 2xl:inline text-xs font-medium truncate max-w-[150px] ${
@@ -276,7 +276,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             >
               <RefreshCw className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isSyncing ? 'animate-spin' : ''}`} />
               <span className="font-bold hidden sm:inline">
-                {isSyncing ? tr('Syncing...', 'Syncing...') : 'Live Synced'}
+                {isSyncing ? tr('Menyinkronkan...', 'Syncing...') : tr('Tersinkronisasi', 'Live Synced')}
               </span>
               {isAltPressed && (
                 <span className="hidden sm:inline-block px-1 py-0.2 rounded bg-amber-400 text-slate-950 font-mono font-black text-[9px] shadow-xs animate-bounce">
@@ -300,7 +300,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 title={tr('Push seluruh data budget, forecast, dan realisasi ke Supabase', 'Push all budget, forecast, and realization datasets to Supabase')}
               >
                 <UploadCloud className={`w-3.5 h-3.5 text-emerald-500 shrink-0 ${isPushingSupabase ? 'animate-bounce' : ''}`} />
-                <span>{isPushingSupabase ? 'Pushing...' : 'Push DB'}</span>
+                <span>{isPushingSupabase ? tr('Mengunggah...', 'Pushing...') : 'Push DB'}</span>
               </button>
             )}
 
