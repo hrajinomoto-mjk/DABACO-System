@@ -1458,7 +1458,196 @@ const RAW_ENTERPRISE_DICTIONARY: Array<[string, string]> = [
   ['Daftar pengguna dan hak akses berhasil disinkronkan dengan basis data.', 'User directory and access permissions successfully synced with the database.'],
   ['Daftar akun pengguna berhasil diunduh dalam format CSV.', 'User account directory successfully downloaded in CSV format.'],
   ['Akun aktif tidak dapat dihapus', 'Active account cannot be deleted'],
-  ['Hapus Akun Pengguna', 'Delete User Account']
+  ['Hapus Akun Pengguna', 'Delete User Account'],
+
+  // =========================================================
+  // 7. COMPLETE AST-AUDITED FULL-SYSTEM COVERAGE (ZERO FRANGLAIS)
+  // =========================================================
+  // Executive Report & Board Briefing
+  ['Akurasi Prediksi Finansial', 'Financial Forecast Accuracy'],
+  ['Efisiensi Pengadaan & Disiplin Pengeluaran SDM', 'Procurement Efficiency & HR Spending Discipline'],
+  ['Integritas Data Real-Time', 'Real-Time Data Integrity'],
+  ['Realisasi Penyerapan', 'Realized Absorption'],
+  ['Departemen Aktif', 'Active Departments'],
+  ['Disetujui', 'Approved'],
+  ['Rekomendasi', 'Recommended'],
+
+  // Dashboard View & Charts
+  ['Buka Laporan Strategis Top Management (Alt+2)', 'Open Top Management Strategic Report (Alt+2)'],
+  ['Pos Item Over Budget', 'Over-Budget Line Items'],
+  ['Pos Item Mendekati Batas (>85%)', 'Line Items Approaching Limit (>85%)'],
+  ['Top Cost Center (Penyerapan)', 'Top Cost Centers (Absorption)'],
+  ['Total Realisasi:', 'Total Realization:'],
+  ['Indikator performa cost discipline terhadap budget anggaran FY', 'Cost discipline performance indicator against allocated FY budget'],
+  ['6 Bulan Berjalan', 'Rolling 6 Months'],
+  ['12 Bulan (FY Apr – Mar)', '12 Months (FY Apr – Mar)'],
+  ['Penyerapan Rata-Rata', 'Average Absorption'],
+  ['Actual Spending (Realisasi)', 'Actual Spending (Realization)'],
+  ['Total Pengeluaran Terdistribusi:', 'Total Distributed Expenditure:'],
+  ['Cari nama pos item...', 'Search line item name...'],
+  ['Hapus pencarian', 'Clear search'],
+  ['Pos Item Terdaftar', 'Registered Line Items'],
+  ['Pos Item Anggaran', 'Budget Line Item'],
+  ['Total Budget (Plafon)', 'Total Budget (Ceiling)'],
+  ['100% Plafon', '100% Ceiling'],
+  ['Top 3 Paling Efisien', 'Top 3 Most Efficient'],
+  ['% dari forecast', '% of forecast'],
+  ['% Sisa)', '% Remaining)'],
+  ['% Terpakai', '% Used'],
+  ['% terpakai', '% used'],
+  ['Hemat: +', 'Saved: +'],
+  ['Distribusi Cost Center', 'Cost Center Distribution'],
+  ['Filter Status:', 'Status Filter:'],
+  ['Mendekati Limit (', 'Approaching Limit ('],
+  ['Mendekati Limit (>', 'Approaching Limit (>'],
+  ['Aman (', 'Safe ('],
+  ['Semua (', 'All ('],
+  ['Reset Filter & Pencarian', 'Reset Filters & Search'],
+  ['Menampilkan', 'Showing'],
+  ['Tampilkan:', 'Show:'],
+  ['Ke:', 'Go to:'],
+  ['Plafon Pleno FY', 'Full FY Ceiling'],
+  ['Serapan:', 'Absorption:'],
+  ['Est. Ukuran: ~220 KB', 'Est. Size: ~220 KB'],
+
+  // Executive Presentation Deck
+  ['Buka Catatan / Poin Pembahasan Presenter (N)', 'Open Presenter Notes / Talking Points (N)'],
+  ['Status Kesehatan Finansial & Disiplin Pengeluaran', 'Financial Health Status & Spending Discipline'],
+  ['Akurasi Proyeksi:', 'Forecast Accuracy:'],
+  ['Realisasi Kas Aktual', 'Actual Cash Realization'],
+  ['% Proyeksi', '% Forecast'],
+  ['Efisiensi Kas Bersih', 'Net Cash Efficiency'],
+  ['Realisasi Saat Ini:', 'Current Realization:'],
+  ['Akurasi Peramalan Anggaran', 'Budget Forecast Accuracy'],
+  ['Realisasi Pengeluaran per Cost Center (Pabrik Mojokerto)', 'Actual Expenditure by Cost Center (Mojokerto Factory)'],
+  ['POS ITEM #', 'LINE ITEM #'],
+  ['%) sebagai dasar laporan konsolidasi pabrik ke Ajinomoto Head Office.', '%) as the basis for consolidated factory reporting to Ajinomoto Head Office.'],
+  ['Realokasi Surplus Efisiensi', 'Efficiency Surplus Reallocation'],
+  ['Tutup Catatan', 'Close Notes'],
+  ['Mode Normal', 'Light Mode'],
+  ['% (Varian Minimal)', '% (Minimal Variance)'],
+  ['Integritas Audit & SAP', 'Audit & SAP Integrity'],
+  ['100% Terekonsiliasi Bersih', '100% Cleanly Reconciled'],
+  ['% Diserap', '% Absorbed'],
+  ['% dari Total Kas', '% of Total Cash'],
+  ['Standar Kepatuhan Zero-Defect', 'Zero-Defect Compliance Standard'],
+  ['Navigasi', 'Navigation'],
+
+  // Bulk Upload Modal
+  ['Tersambung ke Database', 'Connected to Database'],
+  ['2. Pemetaan Header', '2. Header Mapping'],
+  ['4. Hasil Batch', '4. Batch Results'],
+  ['Beralih ke Upload File', 'Switch to File Upload'],
+  ['Status Pemetaan:', 'Mapping Status:'],
+  ['kolom wajib terpetakan', 'required columns mapped'],
+  ['kolom)', 'columns)'],
+  ['baris data,', 'data rows,'],
+  ['Semua Baris (', 'All Rows ('],
+  ['Hanya Siap Impor (', 'Ready to Import Only ('],
+  ['Bermasalah (', 'Issues ('],
+  ['Abaikan baris error dan tetap impor', 'Skip error rows and proceed with import'],
+  ['baris valid', 'valid rows'],
+  ['Tentukan apakah baris baru akan ditambahkan ke data yang sudah ada, atau menimpa total data skema', 'Choose whether new rows are appended to existing records or overwrite the entire schema'],
+  ['Metode Penyimpanan ke Database:', 'Database Save Mode:'],
+  ['Menambahkan (Append)', 'Append'],
+  ['Menyisipkan baris baru ke tabel', 'Inserts new rows into table'],
+  ['. Data lama yang sudah ada di database tetap dipertahankan.', '. Existing records in the database are preserved.'],
+  ['Mengganti seluruh data tabel', 'Replaces all records in table'],
+  ['dengan baris baru dari file ini. Data lama akan digantikan.', 'with new rows from this file. Previous data will be overwritten.'],
+  ['Baris)', 'Rows)'],
+  ['baris)', 'rows)'],
+  ['Sebanyak', 'A total of'],
+  ['record data', 'data records'],
+  ['otomatis tersimpan (', 'automatically saved ('],
+  ['langsung ke dalam database DABACO untuk skema', 'directly into the DABACO database for schema'],
+  ['Memproses Batch...', 'Processing Batch...'],
+  ['Wajib', 'Required'],
+  ['Opsional', 'Optional'],
+
+  // Database Console, Data Management & Download Confirm
+  ['Database Supabase Cloud Live', 'Live Supabase Cloud Database'],
+  ['"Push ke Supabase"', '"Push to Supabase"'],
+  ['Data Budget', 'Budget Data'],
+  ['Data Forecast', 'Forecast Data'],
+  ['Data Realisasi', 'Realization Data'],
+  ['• Auto-Load Aktif (Instant On-Start)', '• Auto-Load Active (Instant On-Start)'],
+  ['Mode Menambahkan (Append / Upsert)', 'Append / Upsert Mode'],
+  ['Mode Menambahkan (Merge)', 'Append / Merge Mode'],
+  ['Unduh Snapshot Cadangan (JSON Backup)', 'Download Backup Snapshot (JSON)'],
+  ['Tutup Konsol', 'Close Console'],
+  ['Target Eksekusi:', 'Execution Target:'],
+  ['Terapkan Pemulihan (', 'Apply Restore ('],
+  ['Kosongkan:', 'Clear:'],
+  ['Mengosongkan Database...', 'Clearing Database...'],
+  ['Realisasi Kas (', 'Cash Realization ('],
+  ['Unduh Data & Laporan', 'Download Data & Reports'],
+  ['Tipe Format', 'Format Type'],
+  ['Rahasia Perusahaan (Internal Confidential) - PT Ajinomoto Indonesia.', 'Company Confidential (Internal Use Only) — PT Ajinomoto Indonesia.'],
+
+  // Banking, Email Alerts, Sheets Sync, Shortcuts, Login/Logout Modals
+  ['Pindah Tab', 'Switch Tabs'],
+  ['transaksi klir', 'cleared transactions'],
+  ['Rek:', 'Acct:'],
+  ['Pasangkan Voucher', 'Match Voucher'],
+  ['[Tervalidasi Sistem]', '[System Validated]'],
+  ['[Tervalidasi SAP]', '[SAP Validated]'],
+  ['Pengiriman peringatan otomatis ke manajemen jika penyerapan mendekati batas (', 'Automated alert dispatch to management when absorption nears threshold ('],
+  ['%) atau melampaui limit anggaran (', '%) or exceeds the budget ceiling ('],
+  ['Pos Item Over Budget (>', 'Over-Budget Line Items (>'],
+  ['GAS Connector Code (Siap Pakai)', 'GAS Connector Code (Ready to Deploy)'],
+  ['Mengerti & Tutup (ESC)', 'Got It & Close (ESC)'],
+  ['Batal dan tutup', 'Cancel and close'],
+  ['Gateway Otentikasi Enterprise', 'Enterprise Authentication Gateway'],
+  ['Tetap di Sistem', 'Stay Signed In'],
+  ['Dokumen', 'Document'],
+  ['Hari', 'Days'],
+
+  // Looker Studio, RLS Fix, Settings, Supabase, User Management, Dynamic Alerts
+  ['Filter Dimensi BI:', 'BI Dimension Filter:'],
+  ['% Absorpsi', '% Absorption'],
+  ['Total Budget Plafon', 'Total Budget Ceiling'],
+  ['100% Budget Sah', '100% Approved Budget'],
+  ['% Sisa Kas', '% Cash Remaining'],
+  ['Record Transaksi Termuat', 'Transaction Records Loaded'],
+  ['Proyeksi Dinamis (Forecast)', 'Dynamic Forecast'],
+  ['Realisasi Pengeluaran', 'Actual Expenditure'],
+  ['% dari total pengeluaran', '% of total expenditure'],
+  ['Analisis Rinci Penyerapan per Cost Center (Cost Discipline Matrix)', 'Detailed Absorption Analysis by Cost Center (Cost Discipline Matrix)'],
+  ['Unit Cost Center', 'Cost Center Unit'],
+  ['di Supabase mengaktifkan', 'in Supabase has enabled'],
+  ['Pesan Galat Supabase:', 'Supabase Error Message:'],
+  ['Jalankan di Supabase', 'Run in Supabase'],
+  ['Solusi Cepat RLS (Direkomendasikan)', 'Quick RLS Fix (Recommended)'],
+  ['Siklus:', 'Cycle:'],
+  ['Level Waspada (Warning)', 'Warning Level'],
+  ['Level Kritis (Overbudget)', 'Critical Level (Overbudget)'],
+  ['Status Revisi Anggaran', 'Budget Revision Status'],
+  ['Master Cost Center Pabrik Mojokerto', 'Mojokerto Factory Master Cost Centers'],
+  ['Semua Entitas (', 'All Entities ('],
+  ['Pusat Biaya', 'Cost Center'],
+  ['Pos Anggaran', 'Budget Line Item'],
+  ['Kepala Bagian / PIC', 'Section Head / PIC'],
+  ['Cost Center Pabrik', 'Factory Cost Centers'],
+  ['Rekaman Transaksi', 'Transaction Records'],
+  ['Rekaman Finansial', 'Financial Records'],
+  ['Terproteksi Aktif', 'Actively Protected'],
+  ['Min. 5 karakter', 'Min. 5 characters'],
+  ['Ulangi password', 'Repeat password'],
+  ['Status Penyimpanan:', 'Storage Status:'],
+  ['Arsitektur Database Cloud DABACO', 'DABACO Cloud Database Architecture'],
+  ['Solusi Error "new row violates row-level security policy":', 'Fix for "new row violates row-level security policy":'],
+  ['Akun Berstatus Aktif', 'Account Status: Active'],
+  ['Admin & Pengendali Anggaran', 'Admin & Budget Controller'],
+  ['Koneksi Basis Data', 'Database Connection'],
+  ['Tersinkron', 'Synchronized'],
+  ['Perbarui profil atau hak akses untuk @', 'Update profile or access permissions for @'],
+  ['Akun', 'Accounts'],
+  ['Kategori Training & Development Mendekati Limit', 'Training & Development Category Approaching Limit'],
+  ['Penyerapan biaya sertifikasi telah mencapai 94.2% dari plafon forecast.', 'Certification cost absorption has reached 94.2% of the forecast ceiling.'],
+  ['Item HR001EDUCATIONFEETRAINING pada bulan Feb melampaui forecast sebesar Rp 8.000.000.', 'Item HR001EDUCATIONFEETRAINING in Feb exceeded forecast by Rp 8,000,000.'],
+  ['Over Budget Terdeteksi:', 'Over Budget Detected:'],
+  ['Pengeluaran aktual telah melebihi plafon budget sebesar', 'Actual expenditure has exceeded the budget ceiling by'],
+  ['Notifikasi email otomatis dikirim.', 'Automated email notification has been dispatched.']
 ];
 
 /**
@@ -1467,20 +1656,41 @@ const RAW_ENTERPRISE_DICTIONARY: Array<[string, string]> = [
  * Never touches proper nouns (DABACO, Ajinomoto, SAP, Google Sheets, Supabase, Looker Studio, PDF, CSV, JSON).
  */
 const RAW_EN_TO_ID_DICTIONARY: Array<[string, string]> = [
+  ['Executive Financial & Budget Briefing Report', 'Laporan Ringkasan Finansial & Anggaran Eksekutif'],
+  ['Executive Board Meeting Presentation Deck', 'Dek Presentasi Rapat Direksi Eksekutif'],
+  ['Business Intelligence & Analytics Studio', 'Studio Analitik & Business Intelligence'],
+  ['Generate Executive PDF Budget Report', 'Buat Laporan Anggaran PDF Eksekutif'],
+  ['Generate Executive PDF Report (Ctrl+P)', 'Buat Laporan PDF Eksekutif (Ctrl+P)'],
+  ['CONFIDENTIAL • TOP MANAGEMENT DOSSIER', 'RAHASIA • DOSIR MANAJEMEN PUNCAK'],
+  ['CONFIDENTIAL • TOP MANAGEMENT', 'RAHASIA • MANAJEMEN PUNCAK'],
+  ['Executive Budget Report Alert', 'Peringatan Laporan Anggaran Eksekutif'],
+  ['Executive Budget Report (PDF)', 'Laporan Anggaran Eksekutif (PDF)'],
+  ['Executive Cover & Scorecard', 'Sampul Eksekutif & Scorecard'],
+  ['Executive Financial KPI Matrix', 'Matriks KPI Finansial Eksekutif'],
+  ['Finance & Accounting Manager', 'Manajer Keuangan & Akuntansi'],
+  ['Factory General Manager', 'General Manager Pabrik'],
+  ['Financial Health Status', 'Status Kesehatan Finansial'],
+  ['Departmental Efficiency', 'Efisiensi Departemen'],
   ['Top Management Report', 'Laporan Manajemen Puncak'],
-  ['Executive PDF', 'PDF Eksekutif'],
+  ['Actual Spending:', 'Pengeluaran Aktual:'],
+  ['Forecasted Budget:', 'Anggaran Proyeksi:'],
+  ['Planned Budget:', 'Rencana Anggaran:'],
+  ['Actual Spending', 'Pengeluaran Aktual'],
+  ['Forecasted Budget', 'Anggaran Proyeksi'],
+  ['Planned Budget', 'Rencana Anggaran'],
+  ['Forecast Projections', 'Proyeksi Anggaran'],
+  ['Actual Realization', 'Realisasi Aktual'],
+  ['Real-Time BI Engine', 'Mesin BI Real-Time'],
+  ['HTML Mail Preview', 'Pratinjau Email HTML'],
   ['Bulk Upload CSV', 'Unggah Massal CSV'],
   ['Bulk Upload', 'Unggah Massal'],
+  ['Executive PDF', 'PDF Eksekutif'],
   ['Export CSV', 'Ekspor CSV'],
   ['Backup JSON', 'Cadangan JSON'],
   ['Reset Default', 'Reset Standar'],
-  ['Actual Spending', 'Pengeluaran Aktual'],
-  ['Forecasted Budget', 'Anggaran Proyeksi'],
   ['Budget Plan', 'Rencana Anggaran'],
-  ['Executive Budget Report Alert', 'Peringatan Laporan Anggaran Eksekutif'],
-  ['HTML Mail Preview', 'Pratinjau Email HTML'],
-  ['Finance & Accounting Manager', 'Manajer Keuangan & Akuntansi'],
-  ['Factory General Manager', 'General Manager Pabrik'],
+  ['Live Connected', 'Terhubung Aktif'],
+  ['Ready to Print', 'Siap Cetak'],
   ['Refresh', 'Muat Ulang'],
   ['Remarks', 'Keterangan']
 ];
@@ -1505,7 +1715,7 @@ const EXACT_ID_TO_EN = new Map<string, string>(
   SORTED_ID_TO_EN.map(([k, v]) => [k.toLowerCase(), v])
 );
 const EXACT_EN_TO_ID = new Map<string, string>(
-  SORTED_EN_TO_ID.map(([k, v]) => [k, v])
+  SORTED_EN_TO_ID.map(([k, v]) => [k.toLowerCase(), v])
 );
 
 const escapeRegExp = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -1521,7 +1731,7 @@ const compileMatchers = (entries: Array<[string, string]>, caseInsensitive: bool
   });
 
 const COMPILED_ID_TO_EN = compileMatchers(SORTED_ID_TO_EN, true);
-const COMPILED_EN_TO_ID = compileMatchers(SORTED_EN_TO_ID, false);
+const COMPILED_EN_TO_ID = compileMatchers(SORTED_EN_TO_ID, true);
 
 // Quick pre-check: skip pure numbers, currencies, codes, URLs, emails
 const SKIP_PATTERN = /^[\s\d.,:%+\-–—/()RpIDR$€¥•|[\]{}@#*!?]+$/;
@@ -1544,11 +1754,12 @@ export function translateTextToEnglish(raw: string): string {
   const leading = raw.match(/^\s*/)?.[0] || '';
   const trailing = raw.match(/\s*$/)?.[0] || '';
 
-  // Fast case-insensitive exact lookup (including standalone Indonesian connectors)
+  // Fast case-insensitive exact lookup (including standalone Indonesian connectors & badges)
   const lowerTrimmed = trimmed.toLowerCase();
   if (lowerTrimmed === 'atau') return `${leading}${preserveCasing(trimmed, 'or')}${trailing}`;
   if (lowerTrimmed === 'dari') return `${leading}${preserveCasing(trimmed, 'of')}${trailing}`;
   if (lowerTrimmed === 'dan') return `${leading}${preserveCasing(trimmed, 'and')}${trailing}`;
+  if (lowerTrimmed === 'anda') return `${leading}${preserveCasing(trimmed, 'You')}${trailing}`;
 
   const exact = EXACT_ID_TO_EN.get(lowerTrimmed);
   if (exact) {
@@ -1591,19 +1802,21 @@ export function translateTextToIndonesian(raw: string): string {
   const leading = raw.match(/^\s*/)?.[0] || '';
   const trailing = raw.match(/\s*$/)?.[0] || '';
 
-  const exact = EXACT_EN_TO_ID.get(trimmed);
+  const exact = EXACT_EN_TO_ID.get(trimmed.toLowerCase());
   if (exact) {
-    return `${leading}${exact}${trailing}`;
+    return `${leading}${preserveCasing(trimmed, exact)}${trailing}`;
   }
 
   let result = raw;
+  let resultLower = result.toLowerCase();
   let changed = false;
 
-  for (const { src, dst, pattern } of COMPILED_EN_TO_ID) {
-    if (result.includes(src)) {
-      const next = result.replace(pattern, dst);
+  for (const { srcLower, dst, pattern } of COMPILED_EN_TO_ID) {
+    if (resultLower.includes(srcLower)) {
+      const next = result.replace(pattern, (match) => preserveCasing(match, dst));
       if (next !== result) {
         result = next;
+        resultLower = result.toLowerCase();
         changed = true;
       }
     }

@@ -196,28 +196,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     };
 
-    // Immediate sync pass + delayed sweep for async chart/modal renders
-    walkAndSync(root, language);
-    const settleTimer = window.setTimeout(() => {
-      if (document.contains(root)) {
-        walkAndSync(root, language);
-      }
-    }, 120);
-
     // Observe dynamic route/tab/modal/attribute/chart updates in BOTH ID and EN modes
     let rafId: number | null = null;
     const pendingNodes = new Set<Node>();
-
-    const flush = () => {
-      rafId = null;
-      const nodes = Array.from(pendingNodes);
-      pendingNodes.clear();
-      for (const n of nodes) {
-        if (document.contains(n)) {
-          walkAndSync(n, language);
-        }
-      }
-    };
 
     const observer = new MutationObserver((mutations) => {
       if (isMutating) return;
@@ -233,6 +214,23 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       }
     });
 
+    const syncAndDrain = (container: Node, targetLang: Language) => {
+      walkAndSync(container, targetLang);
+      // Discard mutations triggered by our own text/attribute writes
+      observer.takeRecords();
+    };
+
+    const flush = () => {
+      rafId = null;
+      const nodes = Array.from(pendingNodes);
+      pendingNodes.clear();
+      for (const n of nodes) {
+        if (document.contains(n)) {
+          syncAndDrain(n, language);
+        }
+      }
+    };
+
     observer.observe(root, {
       childList: true,
       subtree: true,
@@ -241,8 +239,22 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       attributeFilter: TRANSLATABLE_ATTRS
     });
 
+    // Immediate sync pass + delayed sweeps for async chart/modal/animation renders
+    syncAndDrain(root, language);
+    const settleTimerFast = window.setTimeout(() => {
+      if (document.contains(root)) {
+        syncAndDrain(root, language);
+      }
+    }, 120);
+    const settleTimerSlow = window.setTimeout(() => {
+      if (document.contains(root)) {
+        syncAndDrain(root, language);
+      }
+    }, 450);
+
     return () => {
-      window.clearTimeout(settleTimer);
+      window.clearTimeout(settleTimerFast);
+      window.clearTimeout(settleTimerSlow);
       observer.disconnect();
       if (rafId !== null) window.cancelAnimationFrame(rafId);
     };
