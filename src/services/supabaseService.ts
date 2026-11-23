@@ -5,7 +5,9 @@ import {
   RealizationRecord,
   MasterCostCenter,
   MasterItem,
-  SupabaseConfig
+  SupabaseConfig,
+  UserAccount,
+  UserRole
 } from '../types';
 
 let cachedClient: SupabaseClient | null = null;
@@ -109,7 +111,51 @@ CREATE POLICY "Allow all for master_cost_center" ON public.master_cost_center FO
 CREATE POLICY "Allow all for master_items" ON public.master_items FOR ALL TO public USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for budget_plan" ON public.budget_plan FOR ALL TO public USING (true) WITH CHECK (true);
 CREATE POLICY "Allow all for forecast" ON public.forecast FOR ALL TO public USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for realization" ON public.realization FOR ALL TO public USING (true) WITH CHECK (true);`;
+CREATE POLICY "Allow all for realization" ON public.realization FOR ALL TO public USING (true) WITH CHECK (true);
+
+-- 5. Tabel Manajemen Pengguna Lintas Browser (Edge / Chrome / Semua Perangkat)
+CREATE TABLE IF NOT EXISTS public.app_users (
+    id VARCHAR(128) PRIMARY KEY,
+    username VARCHAR(128) UNIQUE NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    department VARCHAR(128) NOT NULL,
+    role VARCHAR(64) NOT NULL DEFAULT 'Staff',
+    status VARCHAR(32) NOT NULL DEFAULT 'Active',
+    created_at VARCHAR(64) NOT NULL,
+    last_login VARCHAR(128),
+    password VARCHAR(255),
+    avatar_color VARCHAR(64)
+);
+ALTER TABLE public.app_users DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE public.app_users TO anon, authenticated, service_role;
+DROP POLICY IF EXISTS "Allow all for app_users" ON public.app_users;
+CREATE POLICY "Allow all for app_users" ON public.app_users FOR ALL TO public USING (true) WITH CHECK (true);`;
+
+export const SUPABASE_USERS_TABLE_SQL = `-- ========================================================
+-- TABEL MANAJEMEN PENGGUNA DABACO (SINKRONISASI LINTAS BROWSER)
+-- Jalankan 1x di Supabase SQL Editor agar edit pengguna di Edge
+-- langsung otomatis sinkron saat dibuka di Chrome atau perangkat lain
+-- ========================================================
+
+CREATE TABLE IF NOT EXISTS public.app_users (
+    id VARCHAR(128) PRIMARY KEY,
+    username VARCHAR(128) UNIQUE NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    department VARCHAR(128) NOT NULL,
+    role VARCHAR(64) NOT NULL DEFAULT 'Staff',
+    status VARCHAR(32) NOT NULL DEFAULT 'Active',
+    created_at VARCHAR(64) NOT NULL,
+    last_login VARCHAR(128),
+    password VARCHAR(255),
+    avatar_color VARCHAR(64)
+);
+
+ALTER TABLE public.app_users DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE public.app_users TO anon, authenticated, service_role;
+DROP POLICY IF EXISTS "Allow all for app_users" ON public.app_users;
+CREATE POLICY "Allow all for app_users" ON public.app_users FOR ALL TO public USING (true) WITH CHECK (true);`;
 
 export function ensureUUID(id: string): string {
   if (!id) {
@@ -291,14 +337,56 @@ export interface FetchResult {
   success: boolean;
   isEmpty?: boolean;
   error?: string;
+  usersTableMissing?: boolean;
   data?: {
     costCenters: MasterCostCenter[];
     masterItems: MasterItem[];
     budget: BudgetRecord[];
     forecast: ForecastRecord[];
     realization: RealizationRecord[];
+    users?: UserAccount[];
   };
 }
+
+export function isMissingTableError(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  const msg = (error.message || '').toLowerCase();
+  return (
+    error.code === '42P01' ||
+    error.code === 'PGRST205' ||
+    msg.includes('does not exist') ||
+    msg.includes('could not find the table') ||
+    msg.includes('schema cache')
+  );
+}
+
+const mapDbRowToUserAccount = (row: any): UserAccount => ({
+  id: String(row.id),
+  username: String(row.username || ''),
+  displayName: String(row.display_name || row.username || ''),
+  email: String(row.email || ''),
+  department: String(row.department || 'HR Development'),
+  role: (row.role as UserRole) || 'Staff',
+  status: row.status === 'Suspended' ? 'Suspended' : 'Active',
+  createdAt: String(row.created_at || new Date().toISOString().slice(0, 10)),
+  lastLogin: row.last_login ? String(row.last_login) : undefined,
+  password: row.password ? String(row.password) : undefined,
+  avatarColor: row.avatar_color ? String(row.avatar_color) : 'bg-blue-600'
+});
+
+const mapUserAccountToDbRow = (u: UserAccount) => ({
+  id: String(u.id),
+  username: String(u.username || '').trim().toLowerCase(),
+  display_name: String(u.displayName || u.username || '').trim(),
+  email: String(u.email || '').trim(),
+  department: String(u.department || 'HR Development').trim(),
+  role: String(u.role || 'Staff'),
+  status: u.status === 'Suspended' ? 'Suspended' : 'Active',
+  created_at: String(u.createdAt || new Date().toISOString().slice(0, 10)),
+  last_login: u.lastLogin ? String(u.lastLogin) : null,
+  password: u.password ? String(u.password) : null,
+  avatar_color: u.avatarColor ? String(u.avatarColor) : 'bg-blue-600'
+});
 
 export async function fetchDatabaseFromSupabase(config: SupabaseConfig): Promise<FetchResult> {
   const client = getSupabaseClient(config);
@@ -310,22 +398,24 @@ export async function fetchDatabaseFromSupabase(config: SupabaseConfig): Promise
   }
 
   try {
-    // Fetch all tables in parallel
+    // Fetch all tables in parallel (including app_users with graceful fallback if table not yet created)
     const [
       costCentersRes,
       masterItemsRes,
       budgetRes,
       forecastRes,
-      realizationRes
+      realizationRes,
+      usersRes
     ] = await Promise.all([
       client.from('master_cost_center').select('*').order('code', { ascending: true }),
       client.from('master_items').select('*').order('code', { ascending: true }),
       client.from('budget_plan').select('*').order('created_at', { ascending: true }),
       client.from('forecast').select('*').order('created_at', { ascending: true }),
-      client.from('realization').select('*').order('tanggal', { ascending: false })
+      client.from('realization').select('*').order('tanggal', { ascending: false }),
+      client.from('app_users').select('*').order('created_at', { ascending: true })
     ]);
 
-    // Check for schema or connection errors
+    // Check for schema or connection errors on core financial tables
     if (costCentersRes.error) {
       throw new Error(`Tabel master_cost_center: ${costCentersRes.error.message}`);
     }
@@ -342,6 +432,12 @@ export async function fetchDatabaseFromSupabase(config: SupabaseConfig): Promise
       throw new Error(`Tabel realization: ${realizationRes.error.message}`);
     }
 
+    const usersTableMissing = isMissingTableError(usersRes.error);
+    const rawUsers = !usersRes.error && Array.isArray(usersRes.data) ? usersRes.data : [];
+    const users: UserAccount[] | undefined = usersTableMissing
+      ? undefined
+      : rawUsers.map(mapDbRowToUserAccount);
+
     const rawCostCenters = costCentersRes.data || [];
     const rawMasterItems = masterItemsRes.data || [];
     const rawBudget = budgetRes.data || [];
@@ -353,12 +449,14 @@ export async function fetchDatabaseFromSupabase(config: SupabaseConfig): Promise
       return {
         success: true,
         isEmpty: true,
+        usersTableMissing,
         data: {
           costCenters: [],
           masterItems: [],
           budget: [],
           forecast: [],
-          realization: []
+          realization: [],
+          users
         }
       };
     }
@@ -415,12 +513,14 @@ export async function fetchDatabaseFromSupabase(config: SupabaseConfig): Promise
     return {
       success: true,
       isEmpty: false,
+      usersTableMissing,
       data: {
         costCenters,
         masterItems,
         budget,
         forecast,
-        realization
+        realization,
+        users
       }
     };
   } catch (err: any) {
@@ -451,6 +551,7 @@ export interface PushResult {
   error?: string;
   isRlsError?: boolean;
   isNetworkError?: boolean;
+  usersTableMissing?: boolean;
   diagnosticType?: 'ok' | 'config_invalid' | 'network_or_paused' | 'auth_invalid' | 'rls_blocked' | 'unknown';
   modeUsed?: 'append' | 'overwrite';
   counts?: {
@@ -459,6 +560,7 @@ export interface PushResult {
     budget: number;
     forecast: number;
     realization: number;
+    users?: number;
   };
 }
 
@@ -592,6 +694,7 @@ export async function pushDatabaseToSupabase(
     budget: BudgetRecord[];
     forecast: ForecastRecord[];
     realization: RealizationRecord[];
+    users?: UserAccount[];
   },
   config: SupabaseConfig,
   onProgress?: (step: string) => void,
@@ -932,17 +1035,37 @@ export async function pushDatabaseToSupabase(
       await upsertInChunks('realization', realizationRows, 'id');
     }
 
+    // 6. Push App Users (gracefully skips if app_users table hasn't been created yet)
+    let usersSynced = 0;
+    let usersTableMissing = false;
+    if (Array.isArray(data.users) && data.users.length > 0) {
+      onProgress?.('Menyinkronkan data Manajemen Pengguna...');
+      const userRows = data.users.map(mapUserAccountToDbRow);
+      const { error: usersErr } = await client.from('app_users').upsert(userRows, { onConflict: 'id' });
+      if (usersErr) {
+        if (isMissingTableError(usersErr)) {
+          usersTableMissing = true;
+        } else {
+          console.warn('Warning syncing app_users during push:', usersErr.message);
+        }
+      } else {
+        usersSynced = userRows.length;
+      }
+    }
+
     onProgress?.('Sinkronisasi Supabase selesai!');
     return {
       success: true,
       diagnosticType: 'ok',
+      usersTableMissing,
       modeUsed: options?.mode || 'append',
       counts: {
         costCenters: selectedTables.costCenters ? costCenterRows.length : 0,
         masterItems: selectedTables.masterItems ? itemRows.length : 0,
         budget: selectedTables.budget ? budgetRows.length : 0,
         forecast: selectedTables.forecast ? forecastRows.length : 0,
-        realization: selectedTables.realization ? realizationRows.length : 0
+        realization: selectedTables.realization ? realizationRows.length : 0,
+        users: usersSynced
       }
     };
   } catch (err: any) {
@@ -1078,5 +1201,332 @@ export async function testSupabaseConnection(config: SupabaseConfig): Promise<Co
         ? `Server Supabase (${normalizedUrl}) tidak dapat dijangkau (Failed to fetch). Proyek Supabase kemungkinan sedang Paused (dijeda), Project URL salah, atau jaringan memblokir *.supabase.co.`
         : errMsg
     };
+  }
+}
+
+// ============================================================================
+// REAL-TIME CROSS-BROWSER CLOUD SYNC HELPERS (USERS & SINGLE-RECORD CRUD)
+// ============================================================================
+
+export interface UsersSyncResult {
+  success: boolean;
+  users?: UserAccount[];
+  tableMissing?: boolean;
+  error?: string;
+}
+
+export async function fetchUsersFromSupabase(config: SupabaseConfig): Promise<UsersSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+  try {
+    const { data, error } = await client
+      .from('app_users')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (error) {
+      if (isMissingTableError(error)) {
+        return { success: false, tableMissing: true, error: 'Tabel app_users belum dibuat di Supabase.' };
+      }
+      return { success: false, error: error.message };
+    }
+    return {
+      success: true,
+      users: (data || []).map(mapDbRowToUserAccount)
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Gagal memuat data pengguna dari Supabase.' };
+  }
+}
+
+export async function upsertUserToSupabase(
+  userAccount: UserAccount,
+  config: SupabaseConfig
+): Promise<UsersSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+  try {
+    const { error } = await client
+      .from('app_users')
+      .upsert([mapUserAccountToDbRow(userAccount)], { onConflict: 'id' });
+    if (error) {
+      if (isMissingTableError(error)) {
+        return { success: false, tableMissing: true, error: 'Tabel app_users belum dibuat di Supabase.' };
+      }
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Gagal menyimpan data pengguna ke Supabase.' };
+  }
+}
+
+export async function deleteUserFromSupabase(
+  userId: string,
+  config: SupabaseConfig
+): Promise<UsersSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+  try {
+    const { error } = await client.from('app_users').delete().eq('id', userId);
+    if (error) {
+      if (isMissingTableError(error)) {
+        return { success: false, tableMissing: true, error: 'Tabel app_users belum dibuat di Supabase.' };
+      }
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Gagal menghapus data pengguna dari Supabase.' };
+  }
+}
+
+export async function syncUsersToSupabase(
+  users: UserAccount[],
+  config: SupabaseConfig
+): Promise<UsersSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) {
+    return { success: false, error: 'Koneksi Supabase belum dikonfigurasi.' };
+  }
+  try {
+    const rows = users.map(mapUserAccountToDbRow);
+    if (rows.length > 0) {
+      const { error } = await client.from('app_users').upsert(rows, { onConflict: 'id' });
+      if (error) {
+        if (isMissingTableError(error)) {
+          return { success: false, tableMissing: true, error: 'Tabel app_users belum dibuat di Supabase.' };
+        }
+        return { success: false, error: error.message };
+      }
+    }
+    // Fetch back authoritative cloud list so deletions/updates from other browsers are merged
+    const { data, error: fetchErr } = await client
+      .from('app_users')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (fetchErr) {
+      return { success: true, users };
+    }
+    return {
+      success: true,
+      users: (data || []).map(mapDbRowToUserAccount)
+    };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Gagal menyinkronkan pengguna ke Supabase.' };
+  }
+}
+
+export interface RecordSyncResult {
+  success: boolean;
+  error?: string;
+}
+
+export async function upsertCostCenterToSupabase(
+  cc: MasterCostCenter,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('master_cost_center').upsert(
+      [
+        {
+          code: (cc.code || '').trim().slice(0, 128),
+          name: (cc.name || cc.code || '').trim().slice(0, 255),
+          department: (cc.department || 'HR Development').trim().slice(0, 128),
+          head_of_dept: (cc.headOfDept || '').trim().slice(0, 128)
+        }
+      ],
+      { onConflict: 'code' }
+    );
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function deleteCostCenterFromSupabase(
+  code: string,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('master_cost_center').delete().eq('code', code);
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function upsertMasterItemToSupabase(
+  item: MasterItem,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('master_items').upsert(
+      [
+        {
+          code: (item.code || '').trim().slice(0, 128),
+          name: (item.name || item.code || '').trim().slice(0, 255),
+          category: (item.category || 'Lainnya').trim().slice(0, 128),
+          status: item.status === 'Inactive' ? 'Inactive' : 'Active'
+        }
+      ],
+      { onConflict: 'code' }
+    );
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function deleteMasterItemFromSupabase(
+  code: string,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('master_items').delete().eq('code', code);
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function upsertBudgetToSupabase(
+  record: BudgetRecord,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('budget_plan').upsert(
+      [
+        {
+          id: ensureUUID(record.id),
+          year: Number(record.year) || 2026,
+          month: String(record.month || 'Apr').trim().slice(0, 32),
+          cost_center: String(record.costCenter || '').trim().slice(0, 128),
+          item: String(record.item || '').trim().slice(0, 128),
+          amount: Number(record.amount) || 0
+        }
+      ],
+      { onConflict: 'id' }
+    );
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function deleteBudgetFromSupabase(
+  id: string,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('budget_plan').delete().eq('id', ensureUUID(id));
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function upsertForecastToSupabase(
+  record: ForecastRecord,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('forecast').upsert(
+      [
+        {
+          id: ensureUUID(record.id),
+          year: Number(record.year) || 2026,
+          month: String(record.month || 'Apr').trim().slice(0, 32),
+          cost_center: String(record.costCenter || '').trim().slice(0, 128),
+          item: String(record.item || '').trim().slice(0, 128),
+          amount: Number(record.amount) || 0
+        }
+      ],
+      { onConflict: 'id' }
+    );
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function deleteForecastFromSupabase(
+  id: string,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('forecast').delete().eq('id', ensureUUID(id));
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function upsertRealizationToSupabase(
+  record: RealizationRecord,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('realization').upsert(
+      [
+        {
+          id: ensureUUID(record.id),
+          tanggal:
+            record.tanggal && record.tanggal.length >= 10
+              ? record.tanggal.slice(0, 10)
+              : new Date().toISOString().slice(0, 10),
+          year: Number(record.year) || 2026,
+          month: String(record.month || 'Apr').trim().slice(0, 32),
+          cost_center: String(record.costCenter || '').trim().slice(0, 128),
+          item: String(record.item || '').trim().slice(0, 128),
+          amount: Number(record.amount) || 0,
+          keterangan: record.keterangan ? String(record.keterangan).trim() : '',
+          encrypted_note: record.encryptedNote || null,
+          banking_reference: record.bankingReference ? String(record.bankingReference).trim().slice(0, 64) : null,
+          reconciled: Boolean(record.reconciled)
+        }
+      ],
+      { onConflict: 'id' }
+    );
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
+  }
+}
+
+export async function deleteRealizationFromSupabase(
+  id: string,
+  config: SupabaseConfig
+): Promise<RecordSyncResult> {
+  const client = getSupabaseClient(config);
+  if (!client) return { success: false, error: 'Unconfigured' };
+  try {
+    const { error } = await client.from('realization').delete().eq('id', ensureUUID(id));
+    return error ? { success: false, error: error.message } : { success: true };
+  } catch (err: any) {
+    return { success: false, error: err?.message || 'Sync error' };
   }
 }

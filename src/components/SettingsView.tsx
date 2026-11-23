@@ -28,7 +28,8 @@ import {
   Database,
   Save,
   Palette,
-  Globe
+  Globe,
+  Clock
 } from 'lucide-react';
 import { MasterCostCenter, MasterItem, BudgetRecord, ForecastRecord, RealizationRecord } from '../types';
 import { createEncryptedBackup } from '../utils/encryption';
@@ -57,6 +58,9 @@ interface SettingsViewProps {
   onAddMasterItem?: (item: MasterItem) => void;
   onEditMasterItem?: (item: MasterItem) => void;
   onDeleteMasterItem?: (code: string) => void;
+  sessionTimeoutMinutes?: number;
+  onChangeSessionTimeout?: (minutes: number) => void;
+  onUpdateAdminPassword?: (username: string, newPassword: string) => void;
 }
 
 export interface BudgetPolicyConfig {
@@ -96,7 +100,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   dataset,
   budgetData = [],
   forecastData = [],
-  realizationData = []
+  realizationData = [],
+  sessionTimeoutMinutes = 15,
+  onChangeSessionTimeout,
+  onUpdateAdminPassword
 }) => {
   const { language, setLanguage, tr } = useLanguage();
   const currentTheme = getThemeById(activeTheme);
@@ -164,6 +171,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       setCredError('Konfirmasi password tidak cocok.');
       return;
     }
+    onUpdateAdminPassword?.(username.trim(), newPassword);
     setCredSuccess(true);
     setNewPassword('');
     setConfirmPassword('');
@@ -1252,6 +1260,61 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               Update Kredensial
             </button>
           </form>
+
+          {/* Session Timeout & Tab-Close Auto-Logout Control */}
+          <div
+            data-i18n-native="true"
+            className="pt-4 border-t border-slate-200 dark:border-slate-800 space-y-3"
+          >
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-slate-800 dark:text-white">
+                    {tr('Keamanan Sesi & Auto-Timeout', 'Session Security & Auto-Timeout')}
+                  </p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                    {tr(
+                      'Otomatis kembali ke Login jika idle atau saat tab browser ditutup',
+                      'Automatically returns to Login when idle or when browser tab is closed'
+                    )}
+                  </p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                {tr('Auto-Logout Tab Tutup: Aktif', 'Tab-Close Logout: Active')}
+              </span>
+            </div>
+
+            {onChangeSessionTimeout && (
+              <div className="space-y-1.5">
+                <span className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                  {tr('Batas Waktu Tidak Aktif (Idle Timeout):', 'Idle Inactivity Timeout Duration:')}
+                </span>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {[1, 5, 10, 15, 30, 60].map((mins) => {
+                    const isSelected = sessionTimeoutMinutes === mins;
+                    return (
+                      <button
+                        key={mins}
+                        type="button"
+                        onClick={() => onChangeSessionTimeout(mins)}
+                        className={`px-2 py-1.5 rounded-xl text-[11px] font-bold border transition cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                            : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-amber-400'
+                        }`}
+                      >
+                        {mins} {tr('Mnt', 'Min')}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </div>
 
           {/* Security Status Info */}
           <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">

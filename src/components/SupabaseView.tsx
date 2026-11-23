@@ -219,7 +219,27 @@ RETURNS TEXT AS $$
 BEGIN
     RETURN encode(pgp_sym_encrypt(note_text, secret_key), 'base64');
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;`;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 9. App Users Table (Sinkronisasi Akun Pengguna Lintas Browser Edge / Chrome / Semua Perangkat)
+CREATE TABLE IF NOT EXISTS public.app_users (
+    id VARCHAR(128) PRIMARY KEY,
+    username VARCHAR(128) UNIQUE NOT NULL,
+    display_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    department VARCHAR(128) NOT NULL,
+    role VARCHAR(64) NOT NULL DEFAULT 'Staff',
+    status VARCHAR(32) NOT NULL DEFAULT 'Active',
+    created_at VARCHAR(64) NOT NULL,
+    last_login VARCHAR(128),
+    password VARCHAR(255),
+    avatar_color VARCHAR(64)
+);
+
+ALTER TABLE public.app_users DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON TABLE public.app_users TO anon, authenticated, service_role;
+DROP POLICY IF EXISTS "Allow all for app_users" ON public.app_users;
+CREATE POLICY "Allow all for app_users" ON public.app_users FOR ALL TO public USING (true) WITH CHECK (true);`;
 
   const envUrl =
     typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL

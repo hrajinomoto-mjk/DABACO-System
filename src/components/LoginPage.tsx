@@ -21,7 +21,7 @@ import {
   Sparkles,
   ChevronRight
 } from 'lucide-react';
-import { UserSession } from '../types';
+import { UserAccount, UserSession } from '../types';
 import { AjinomotoLogo } from './AjinomotoLogo';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { ThemePicker } from './ThemePicker';
@@ -36,6 +36,12 @@ interface LoginPageProps {
   setDarkMode: (val: boolean) => void;
   activeTheme?: ThemeId;
   onSelectTheme?: (theme: ThemeId) => void;
+  users?: UserAccount[];
+  sessionNotice?: {
+    reason: 'timeout' | 'tab_closed';
+    timeoutMinutes?: number;
+  } | null;
+  onDismissSessionNotice?: () => void;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
@@ -44,7 +50,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
   darkMode,
   setDarkMode,
   activeTheme = (darkMode ? 'midnight-dark' : 'crimson-light') as ThemeId,
-  onSelectTheme
+  onSelectTheme,
+  users,
+  sessionNotice = null,
+  onDismissSessionNotice
 }) => {
   const { tr, locale } = useLanguage();
   const handleSelectTheme = (themeId: ThemeId) => {
@@ -93,16 +102,30 @@ export const LoginPage: React.FC<LoginPageProps> = ({
     setTimeout(() => {
       setLoading(false);
 
-      // Check registered users from persistent database
-      let matchedUser = null;
-      try {
-        const storedUsers = localStorage.getItem('dabaco_users');
-        if (storedUsers) {
-          const parsed = JSON.parse(storedUsers);
-          matchedUser = parsed.find((u: any) => u.username?.toLowerCase() === username.trim().toLowerCase());
+      // Check registered users from live cloud-synced users prop (with localStorage fallback)
+      let matchedUser: UserAccount | undefined;
+      const normalizedInput = username.trim().toLowerCase();
+      if (Array.isArray(users) && users.length > 0) {
+        matchedUser = users.find(
+          (u) =>
+            u.username?.toLowerCase() === normalizedInput ||
+            u.email?.toLowerCase() === normalizedInput
+        );
+      }
+      if (!matchedUser) {
+        try {
+          const storedUsers = localStorage.getItem('dabaco_users');
+          if (storedUsers) {
+            const parsed: UserAccount[] = JSON.parse(storedUsers);
+            matchedUser = parsed.find(
+              (u) =>
+                u.username?.toLowerCase() === normalizedInput ||
+                u.email?.toLowerCase() === normalizedInput
+            );
+          }
+        } catch (err) {
+          console.error('Error reading dabaco_users in LoginPage', err);
         }
-      } catch (err) {
-        console.error('Error reading dabaco_users in LoginPage', err);
       }
 
       const timestamp = new Date().toLocaleDateString(locale, {
@@ -114,11 +137,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       }) + ' WIB';
 
       if (matchedUser) {
-        if (matchedUser.status === 'Inactive') {
+        if (matchedUser.status === 'Suspended' || (matchedUser.status as string) === 'Inactive') {
           setError(
             tr(
               'Akun ini dinonaktifkan oleh administrator. Silakan hubungi Pimpinan HR Dept. atau Helpdesk.',
-              'This account has been deactivated by an administrator. Please contact HR Dept. Leadership or Helpdesk.'
+              'This account has been suspended by an administrator. Please contact HR Dept. Leadership or Helpdesk.'
+            )
+          );
+          return;
+        }
+
+        if (matchedUser.password && matchedUser.password !== password) {
+          setError(
+            tr(
+              'Kata sandi untuk akun ini tidak sesuai. Silakan periksa kembali kata sandi terbaru Anda.',
+              'Incorrect password for this account. Please verify your latest password.'
             )
           );
           return;
@@ -459,6 +492,42 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                   </span>
                 </div>
               </div>
+
+              {/* Session Expired / Tab-Closed Security Notice */}
+              {sessionNotice && (
+                <div
+                  className={`mb-2 p-2 rounded-xl border text-[11px] flex items-start justify-between gap-2 animate-fadeIn ${
+                    darkMode
+                      ? 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                      : 'bg-amber-50 border-amber-200 text-amber-800'
+                  }`}
+                >
+                  <div className="flex items-start gap-1.5 min-w-0">
+                    <Clock className="w-3.5 h-3.5 shrink-0 text-amber-500 mt-0.5" />
+                    <span className="font-medium leading-snug">
+                      {sessionNotice.reason === 'tab_closed'
+                        ? tr(
+                            'Sesi sebelumnya berakhir otomatis karena tab browser ditutup. Silakan masuk kembali.',
+                            'Your previous session ended automatically because the browser tab was closed. Please sign in again.'
+                          )
+                        : tr(
+                            `Sesi berakhir otomatis karena tidak ada aktivitas selama ${sessionNotice.timeoutMinutes || 15} menit. Silakan masuk kembali.`,
+                            `Session expired automatically after ${sessionNotice.timeoutMinutes || 15} minutes of inactivity. Please sign in again.`
+                          )}
+                    </span>
+                  </div>
+                  {onDismissSessionNotice && (
+                    <button
+                      type="button"
+                      onClick={onDismissSessionNotice}
+                      aria-label={tr('Tutup pemberitahuan', 'Dismiss notice')}
+                      className="p-0.5 rounded hover:bg-amber-500/20 transition shrink-0 cursor-pointer"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              )}
 
               {/* Error Message Box */}
               {error && (

@@ -20,16 +20,23 @@ import {
   Mail,
   Lock,
   X,
-  Check
+  Check,
+  Copy,
+  ExternalLink,
+  Cloud
 } from 'lucide-react';
 import { UserAccount, UserRole, UserSession } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
+import { SUPABASE_USERS_TABLE_SQL, extractSupabaseProjectRef } from '../services/supabaseService';
 
 interface UserManagementViewProps {
   users: UserAccount[];
   onAddUser: (userData: Omit<UserAccount, 'id' | 'createdAt'>) => void;
   onDeleteUser: (userId: string) => void;
   onUpdateUser: (userId: string, updates: Partial<UserAccount>) => void;
-  onSyncDatabase: () => void;
+  onSyncDatabase: () => Promise<void> | void;
+  usersCloudStatus?: 'synced' | 'table_missing' | 'unconfigured' | 'error';
+  supabaseProjectUrl?: string;
   currentUser: UserSession;
   darkMode: boolean;
 }
@@ -83,9 +90,12 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   onDeleteUser,
   onUpdateUser,
   onSyncDatabase,
+  usersCloudStatus = 'unconfigured',
+  supabaseProjectUrl = '',
   currentUser,
   darkMode
 }) => {
+  const { tr } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDept, setSelectedDept] = useState('all');
   const [selectedRole, setSelectedRole] = useState('all');
@@ -96,7 +106,13 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
   const [userToEdit, setUserToEdit] = useState<UserAccount | null>(null);
 
   const [isSyncing, setIsSyncing] = useState(false);
+  const [copiedUsersSql, setCopiedUsersSql] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const projectRef = extractSupabaseProjectRef(supabaseProjectUrl);
+  const sqlEditorUrl = projectRef
+    ? `https://supabase.com/dashboard/project/${projectRef}/sql/new`
+    : 'https://supabase.com/dashboard';
 
   // Add form fields
   const [formDisplayName, setFormDisplayName] = useState('');
@@ -194,13 +210,19 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
     setUserToDelete(null);
   };
 
-  const handleSyncDatabaseClick = () => {
+  const handleSyncDatabaseClick = async () => {
     setIsSyncing(true);
-    setTimeout(() => {
-      onSyncDatabase();
+    try {
+      await onSyncDatabase();
+    } finally {
       setIsSyncing(false);
-      showNotification('Daftar pengguna dan hak akses berhasil disinkronkan dengan basis data.');
-    }, 700);
+    }
+  };
+
+  const handleCopyUsersSql = () => {
+    navigator.clipboard.writeText(SUPABASE_USERS_TABLE_SQL);
+    setCopiedUsersSql(true);
+    setTimeout(() => setCopiedUsersSql(false), 2500);
   };
 
   const handleExportUsers = () => {
@@ -252,9 +274,28 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
                 <Users className="w-5 h-5" />
               </span>
               <div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                  Manajemen Pengguna & Hak Akses
-                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                    Manajemen Pengguna & Hak Akses
+                  </h2>
+                  <span
+                    data-i18n-native="true"
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold border ${
+                      usersCloudStatus === 'synced'
+                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/25'
+                        : usersCloudStatus === 'table_missing'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/25'
+                          : 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/25'
+                    }`}
+                  >
+                    <Cloud className="w-3 h-3" />
+                    {usersCloudStatus === 'synced'
+                      ? tr('Cloud Sync Aktif (Lintas Browser)', 'Cloud Sync Active (Cross-Browser)')
+                      : usersCloudStatus === 'table_missing'
+                        ? tr('Perlu Buat Tabel app_users di Supabase', 'Setup app_users Table in Supabase')
+                        : tr('Mode Lokal Browser', 'Local Browser Mode')}
+                  </span>
+                </div>
                 <p className={`text-xs mt-0.5 ${darkMode ? 'text-slate-300' : 'text-slate-600'}`}>
                   Kelola akun staf, kepala seksi, dan penanggung jawab anggaran. Penambahan dan penghapusan akun terintegrasi langsung dengan basis data DABACO.
                 </p>
@@ -297,6 +338,63 @@ export const UserManagementView: React.FC<UserManagementViewProps> = ({
             </button>
           </div>
         </div>
+
+        {/* Cloud Table Missing Setup Helper Banner */}
+        {usersCloudStatus === 'table_missing' && (
+          <div
+            data-i18n-native="true"
+            className={`mt-4 p-4 rounded-2xl border text-xs flex flex-col lg:flex-row lg:items-center justify-between gap-3 ${
+              darkMode
+                ? 'bg-amber-950/25 border-amber-500/30 text-amber-200'
+                : 'bg-amber-50 border-amber-200 text-amber-900'
+            }`}
+          >
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div className="space-y-0.5">
+                <p className="font-bold">
+                  {tr(
+                    'Aktifkan Sinkronisasi Pengguna Lintas Browser (Edge ↔ Chrome):',
+                    'Enable Cross-Browser User Sync (Edge ↔ Chrome):'
+                  )}
+                </p>
+                <p className={darkMode ? 'text-amber-300/90' : 'text-amber-800'}>
+                  {tr(
+                    'Tabel public.app_users belum dibuat di Supabase Anda. Jalankan skrip SQL 1x di Supabase SQL Editor lalu klik "Sinkron ke Basis Data" agar edit pengguna di Edge langsung muncul di Chrome.',
+                    'Table public.app_users has not been created in your Supabase project yet. Run the SQL script once in Supabase SQL Editor and click "Sync to Database" so user edits in Edge appear instantly in Chrome.'
+                  )}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopyUsersSql}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] transition cursor-pointer"
+              >
+                {copiedUsersSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>
+                  {copiedUsersSql
+                    ? tr('SQL Tersalin!', 'SQL Copied!')
+                    : tr('Salin SQL Tabel Pengguna', 'Copy Users Table SQL')}
+                </span>
+              </button>
+              <a
+                href={sqlEditorUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-[11px] border transition ${
+                  darkMode
+                    ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                    : 'bg-white hover:bg-amber-100 text-amber-900 border-amber-300'
+                }`}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>{tr('Buka SQL Editor', 'Open SQL Editor')}</span>
+              </a>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 4 Summary Stat Cards */}

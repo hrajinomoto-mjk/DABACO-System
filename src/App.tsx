@@ -23,6 +23,7 @@ import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { AltKeyGuideHUD } from './components/AltKeyGuideHUD';
 import { RlsFixModal } from './components/RlsFixModal';
 import { DatabaseConsoleModal } from './components/DatabaseConsoleModal';
+import { SessionTimeoutModal } from './components/SessionTimeoutModal';
 import {
   ThemeId,
   DEFAULT_DARK_THEME,
@@ -53,7 +54,20 @@ import {
   pushDatabaseToSupabase,
   isConfigValid,
   normalizeSupabaseConfig,
-  diagnoseSupabaseConfigIssue
+  diagnoseSupabaseConfigIssue,
+  upsertUserToSupabase,
+  deleteUserFromSupabase,
+  syncUsersToSupabase,
+  upsertCostCenterToSupabase,
+  deleteCostCenterFromSupabase,
+  upsertMasterItemToSupabase,
+  deleteMasterItemFromSupabase,
+  upsertBudgetToSupabase,
+  deleteBudgetFromSupabase,
+  upsertForecastToSupabase,
+  deleteForecastFromSupabase,
+  upsertRealizationToSupabase,
+  deleteRealizationFromSupabase
 } from './services/supabaseService';
 
 import {
@@ -92,28 +106,165 @@ const loadPersistentData = <T,>(key: string, fallback: T): T => {
   return fallback;
 };
 
+const SESSION_TAB_KEY = 'dabaco_tab_session';
+const SESSION_ACTIVE_FLAG_KEY = 'dabaco_had_active_session';
+const SESSION_TIMEOUT_MINUTES_KEY = 'dabaco_session_timeout_minutes';
+const VALID_TIMEOUT_OPTIONS = [1, 5, 10, 15, 30, 60] as const;
+
+const DEFAULT_USER_SESSION: UserSession = {
+  username: 'admin',
+  displayName: 'HR Administrator',
+  department: 'HR Development',
+  role: 'SuperAdmin',
+  isLoggedIn: false,
+  lastLogin: '2026-09-06 20:55 WIB'
+};
+
+interface SessionNoticeState {
+  reason: 'timeout' | 'tab_closed';
+  timeoutMinutes?: number;
+}
+
+interface InitialSessionBootstrap {
+  timeoutMinutes: number;
+  page: 'landing' | 'login' | 'workspace';
+  isAuthenticated: boolean;
+  user: UserSession;
+  activeTab: ActiveTab;
+  notice: SessionNoticeState | null;
+  shouldClearExpiredSession: boolean;
+  shouldClearActiveFlag: boolean;
+}
+
+const loadInitialSessionBootstrap = (): InitialSessionBootstrap => {
+  let timeoutMinutes = 15;
+  try {
+    const savedTimeout = Number(localStorage.getItem(SESSION_TIMEOUT_MINUTES_KEY));
+    if (VALID_TIMEOUT_OPTIONS.includes(savedTimeout as (typeof VALID_TIMEOUT_OPTIONS)[number])) {
+      timeoutMinutes = savedTimeout;
+    }
+  } catch {
+    // Ignore storage errors
+  }
+
+  try {
+    const rawTabSession = sessionStorage.getItem(SESSION_TAB_KEY);
+    if (rawTabSession) {
+      const parsed = JSON.parse(rawTabSession);
+      const lastActivityAt = typeof parsed?.lastActivityAt === 'number' ? parsed.lastActivityAt : 0;
+      const elapsedMs = Date.now() - lastActivityAt;
+      if (parsed?.user?.isLoggedIn && elapsedMs >= 0 && elapsedMs < timeoutMinutes * 60_000) {
+        return {
+          timeoutMinutes,
+          page: 'workspace',
+          isAuthenticated: true,
+          user: { ...DEFAULT_USER_SESSION, ...parsed.user, isLoggedIn: true },
+          activeTab: (parsed.activeTab as ActiveTab) || 'dashboard',
+          notice: null,
+          shouldClearExpiredSession: false,
+          shouldClearActiveFlag: false
+        };
+      }
+      // Session existed in this tab but timed out while idle/sleeping
+      return {
+        timeoutMinutes,
+        page: 'login',
+        isAuthenticated: false,
+        user: DEFAULT_USER_SESSION,
+        activeTab: 'dashboard',
+        notice: { reason: 'timeout', timeoutMinutes },
+        shouldClearExpiredSession: true,
+        shouldClearActiveFlag: true
+      };
+    }
+
+    // No sessionStorage in this tab: check if user had previously logged in and closed the browser tab
+    if (localStorage.getItem(SESSION_ACTIVE_FLAG_KEY) === '1') {
+      return {
+        timeoutMinutes,
+        page: 'login',
+        isAuthenticated: false,
+        user: DEFAULT_USER_SESSION,
+        activeTab: 'dashboard',
+        notice: { reason: 'tab_closed' },
+        shouldClearExpiredSession: false,
+        shouldClearActiveFlag: true
+      };
+    }
+  } catch {
+    // Fallback cleanly to landing page
+  }
+
+  return {
+    timeoutMinutes,
+    page: 'landing',
+    isAuthenticated: false,
+    user: DEFAULT_USER_SESSION,
+    activeTab: 'dashboard',
+    notice: null,
+    shouldClearExpiredSession: false,
+    shouldClearActiveFlag: false
+  };
+};
+
 export default function App() {
   const { language, tr } = useLanguage();
   const languageRef = React.useRef<Language>(language);
   useEffect(() => {
     languageRef.current = language;
   }, [language]);
+
+  const initialSessionRef = React.useRef<InitialSessionBootstrap | null>(null);
+  if (!initialSessionRef.current) {
+    initialSessionRef.current = loadInitialSessionBootstrap();
+  }
+  const initialSession = initialSessionRef.current;
+
   // Page Routing & Authentication State
-  // Required flow: When system is opened, system directly opens Landing Page -> Login Page -> Dashboard System
-  const [currentPage, setCurrentPage] = useState<'landing' | 'login' | 'workspace'>('landing');
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  // Flow: Landing -> Login -> Workspace; automatically returns to Login on idle timeout or after browser tab is closed
+  const [currentPage, setCurrentPage] = useState<'landing' | 'login' | 'workspace'>(initialSession.page);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(initialSession.isAuthenticated);
   const [showLoginModal, setShowLoginModal] = useState<boolean>(false);
-  const [user, setUser] = useState<UserSession>({
-    username: 'admin',
-    displayName: 'HR Administrator',
-    department: 'HR Development',
-    role: 'SuperAdmin',
-    isLoggedIn: false,
-    lastLogin: '2026-09-06 20:55 WIB'
-  });
+  const [user, setUser] = useState<UserSession>(initialSession.user);
+
+  // Session Timeout & Tab-Close Security State
+  const [sessionTimeoutMinutes, setSessionTimeoutMinutes] = useState<number>(initialSession.timeoutMinutes);
+  const [sessionNotice, setSessionNotice] = useState<SessionNoticeState | null>(initialSession.notice);
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState<boolean>(false);
+  const [timeoutRemainingSeconds, setTimeoutRemainingSeconds] = useState<number>(60);
+  const lastActivityAtRef = React.useRef<number>(Date.now());
+  const showTimeoutWarningRef = React.useRef<boolean>(false);
+  useEffect(() => {
+    showTimeoutWarningRef.current = showTimeoutWarning;
+  }, [showTimeoutWarning]);
+
+  // Perform one-time storage cleanup after bootstrap (safe under React StrictMode)
+  useEffect(() => {
+    try {
+      if (initialSession.shouldClearExpiredSession) {
+        sessionStorage.removeItem(SESSION_TAB_KEY);
+      }
+      if (initialSession.shouldClearActiveFlag) {
+        localStorage.removeItem(SESSION_ACTIVE_FLAG_KEY);
+      }
+      if (initialSession.isAuthenticated) {
+        // Refresh lastActivityAt on valid same-tab reload
+        const existing = sessionStorage.getItem(SESSION_TAB_KEY);
+        if (existing) {
+          const parsed = JSON.parse(existing);
+          sessionStorage.setItem(
+            SESSION_TAB_KEY,
+            JSON.stringify({ ...parsed, lastActivityAt: Date.now() })
+          );
+        }
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+  }, [initialSession]);
 
   // Navigation & Theme
-  const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
+  const [activeTab, setActiveTab] = useState<ActiveTab>(initialSession.activeTab);
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
     return localStorage.getItem('dabaco_sidebar_collapsed') === 'true';
@@ -330,10 +481,21 @@ export default function App() {
     return null;
   });
 
-  // Manual Reload from Supabase directly if requested by user
+  const [usersCloudStatus, setUsersCloudStatus] = useState<'synced' | 'table_missing' | 'unconfigured' | 'error'>(() =>
+    isConfigValid(supabaseConfig) ? 'synced' : 'unconfigured'
+  );
+  const lastCloudPullAtRef = React.useRef<number>(0);
+
+  const stampLastSyncNow = () => {
+    const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    setDbLastSyncTime(nowStr);
+  };
+
+  // Load latest data (Financial + Master + Users) from Supabase Cloud
   const handleLoadFromSupabase = async (configToUse = supabaseConfig, silent = false) => {
     if (!isConfigValid(configToUse)) {
       setDbSyncStatus('unconfigured');
+      setUsersCloudStatus('unconfigured');
       setIsDbLoading(false);
       return;
     }
@@ -341,7 +503,22 @@ export default function App() {
     setIsDbLoading(true);
     try {
       const res = await fetchDatabaseFromSupabase(configToUse);
+      lastCloudPullAtRef.current = Date.now();
       if (res.success && res.data) {
+        // Sync Users table from Supabase Cloud (cross-browser Edge <-> Chrome)
+        if (res.usersTableMissing) {
+          setUsersCloudStatus('table_missing');
+        } else if (Array.isArray(res.data.users)) {
+          if (res.data.users.length > 0) {
+            setUsers(res.data.users);
+            setUsersCloudStatus('synced');
+          } else {
+            // Table exists in Supabase but is empty -> seed initial users once
+            const seedRes = await syncUsersToSupabase(users, configToUse);
+            setUsersCloudStatus(seedRes.success ? 'synced' : seedRes.tableMissing ? 'table_missing' : 'error');
+          }
+        }
+
         if (res.isEmpty) {
           setDbSyncStatus('empty');
           if (!silent) {
@@ -355,10 +532,11 @@ export default function App() {
           if (res.data.realization.length > 0) setRealization(res.data.realization);
 
           setDbSyncStatus('connected');
-          const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-          setDbLastSyncTime(nowStr);
+          setLastSupabaseError(null);
+          stampLastSyncNow();
           if (!silent) {
-            showToast(`Data berhasil dimuat dari database Supabase (${res.data.budget.length} Budget, ${res.data.forecast.length} Forecast, ${res.data.realization.length} Realisasi)!`);
+            const usersNote = Array.isArray(res.data.users) ? `, ${res.data.users.length} Pengguna` : '';
+            showToast(`Data berhasil dimuat dari database Supabase (${res.data.budget.length} Budget, ${res.data.forecast.length} Forecast, ${res.data.realization.length} Realisasi${usersNote})!`);
           }
         }
       } else {
@@ -377,15 +555,28 @@ export default function App() {
     }
   };
 
-  // Auto-load on system launch: data is already available synchronously without network pull!
+  // Real Auto-Load on system launch & when Supabase credentials become valid (ensures Edge & Chrome always pull latest cloud data)
   useEffect(() => {
-    if (!dbLastSyncTime) {
-      const nowStr = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      setDbLastSyncTime(nowStr);
+    if (isConfigValid(supabaseConfig)) {
+      void handleLoadFromSupabase(supabaseConfig, true);
+    } else if (!dbLastSyncTime) {
+      stampLastSyncNow();
     }
-  }, []);
+  }, [supabaseConfig.projectUrl, supabaseConfig.anonKey]);
 
-  // Push full dataset to Supabase
+  // Auto-refresh from Supabase Cloud when switching back to this browser tab (e.g. edited in Edge -> switch to Chrome)
+  useEffect(() => {
+    const handleTabVisibleRefresh = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (!isConfigValid(supabaseConfig) || isPushingToSupabase || isDbLoading) return;
+      if (Date.now() - lastCloudPullAtRef.current < 15_000) return;
+      void handleLoadFromSupabase(supabaseConfig, true);
+    };
+    document.addEventListener('visibilitychange', handleTabVisibleRefresh);
+    return () => document.removeEventListener('visibilitychange', handleTabVisibleRefresh);
+  }, [supabaseConfig.projectUrl, supabaseConfig.anonKey, isPushingToSupabase, isDbLoading]);
+
+  // Push full dataset (including users) to Supabase
   const handlePushDataToSupabase = async (customConfig?: Partial<SupabaseConfig>) => {
     const activeCfg = normalizeSupabaseConfig({ ...supabaseConfig, ...customConfig });
     const cfgIssue = diagnoseSupabaseConfigIssue(activeCfg);
@@ -410,16 +601,17 @@ export default function App() {
           masterItems,
           budget,
           forecast,
-          realization
+          realization,
+          users
         },
         activeCfg,
         (step) => setPushProgressMessage(step)
       );
 
       if (res.success && res.counts) {
-        const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        stampLastSyncNow();
         setDbSyncStatus('connected');
-        setDbLastSyncTime(nowTime);
+        setUsersCloudStatus(res.usersTableMissing ? 'table_missing' : 'synced');
         setLastSupabaseError(null);
         setSupabaseConfig(prev =>
           normalizeSupabaseConfig({
@@ -525,22 +717,144 @@ export default function App() {
       createdAt: new Date().toISOString().slice(0, 10)
     };
     setUsers(prev => [newUser, ...prev]);
+    if (isConfigValid(supabaseConfig)) {
+      void upsertUserToSupabase(newUser, supabaseConfig).then(res => {
+        if (res.success) {
+          setUsersCloudStatus('synced');
+          stampLastSyncNow();
+        } else if (res.tableMissing) {
+          setUsersCloudStatus('table_missing');
+          showToast(
+            tr(
+              'Akun tersimpan di browser ini, namun tabel app_users belum dibuat di Supabase agar sinkron ke browser lain.',
+              'Account saved locally, but table app_users is not created in Supabase yet for cross-browser sync.'
+            ),
+            'warning'
+          );
+        } else {
+          setUsersCloudStatus('error');
+        }
+      });
+    }
     showToast(`Akun pengguna ${newUser.displayName} (@${newUser.username}) berhasil ditambahkan!`);
   };
 
   const handleDeleteUser = (userId: string) => {
     setUsers(prev => prev.filter(u => u.id !== userId));
+    if (isConfigValid(supabaseConfig)) {
+      void deleteUserFromSupabase(userId, supabaseConfig).then(res => {
+        if (res.success) {
+          setUsersCloudStatus('synced');
+          stampLastSyncNow();
+        } else if (res.tableMissing) {
+          setUsersCloudStatus('table_missing');
+        }
+      });
+    }
     showToast('Akun pengguna berhasil dihapus dari basis data.');
   };
 
   const handleUpdateUser = (userId: string, updates: Partial<UserAccount>) => {
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, ...updates } : u));
+    let updatedAccount: UserAccount | null = null;
+    setUsers(prev =>
+      prev.map(u => {
+        if (u.id === userId) {
+          updatedAccount = { ...u, ...updates };
+          return updatedAccount;
+        }
+        return u;
+      })
+    );
+    const existing = users.find(u => u.id === userId);
+    const targetToSync: UserAccount | null = updatedAccount || (existing ? { ...existing, ...updates } : null);
+    if (targetToSync && isConfigValid(supabaseConfig)) {
+      void upsertUserToSupabase(targetToSync, supabaseConfig).then(res => {
+        if (res.success) {
+          setUsersCloudStatus('synced');
+          stampLastSyncNow();
+        } else if (res.tableMissing) {
+          setUsersCloudStatus('table_missing');
+          showToast(
+            tr(
+              'Perubahan tersimpan di browser ini. Buat tabel app_users di Supabase agar perubahan otomatis muncul di Chrome/browser lain.',
+              'Saved locally. Create table app_users in Supabase so changes automatically sync to Chrome/other browsers.'
+            ),
+            'warning'
+          );
+        } else {
+          setUsersCloudStatus('error');
+        }
+      });
+    }
     showToast('Data akun pengguna berhasil diperbarui!');
   };
 
-  const handleSyncUserDatabase = () => {
+  const handleUpdateAdminPassword = (targetUsername: string, newPassword: string) => {
+    const cleanUser = targetUsername.trim().toLowerCase();
+    const matched = users.find(u => u.username.toLowerCase() === cleanUser);
+    if (matched) {
+      handleUpdateUser(matched.id, { password: newPassword });
+    } else {
+      const created: UserAccount = {
+        id: `usr-${Date.now().toString().slice(-4)}`,
+        username: cleanUser,
+        displayName: user.displayName || 'HR Administrator',
+        email: `${cleanUser}@ajinomoto.co.id`,
+        department: user.department || 'HR Development',
+        role: 'SuperAdmin',
+        status: 'Active',
+        createdAt: new Date().toISOString().slice(0, 10),
+        password: newPassword,
+        avatarColor: 'bg-red-600'
+      };
+      setUsers(prev => [created, ...prev]);
+      if (isConfigValid(supabaseConfig)) {
+        void upsertUserToSupabase(created, supabaseConfig);
+      }
+      showToast('Kredensial administrator berhasil diperbarui & disinkronkan!');
+    }
+  };
+
+  const handleSyncUserDatabase = async () => {
     localStorage.setItem('dabaco_users', JSON.stringify(users));
-    showToast('Basis data otentikasi DABACO berhasil disinkronkan!');
+    if (!isConfigValid(supabaseConfig)) {
+      setUsersCloudStatus('unconfigured');
+      showToast(
+        tr(
+          'Tersimpan lokal. Hubungkan Supabase terlebih dahulu agar data pengguna sinkron antara Edge & Chrome.',
+          'Saved locally. Configure Supabase first so users sync across Edge & Chrome.'
+        ),
+        'warning'
+      );
+      return;
+    }
+
+    const res = await syncUsersToSupabase(users, supabaseConfig);
+    if (res.success) {
+      if (Array.isArray(res.users) && res.users.length > 0) {
+        setUsers(res.users);
+      }
+      setUsersCloudStatus('synced');
+      stampLastSyncNow();
+      showToast(
+        tr(
+          `Basis data pengguna berhasil disinkronkan ke Cloud Supabase (${res.users?.length ?? users.length} akun aktif lintas browser)!`,
+          `User database synced to Supabase Cloud (${res.users?.length ?? users.length} accounts synced across browsers)!`
+        )
+      );
+    } else if (res.tableMissing) {
+      setUsersCloudStatus('table_missing');
+      showToast(
+        tr(
+          'Tabel public.app_users belum dibuat di Supabase. Klik "Salin SQL Tabel Pengguna" di halaman ini lalu jalankan di Supabase SQL Editor.',
+          'Table public.app_users is missing in Supabase. Click "Copy Users Table SQL" and run it in Supabase SQL Editor.'
+        ),
+        'warning'
+      );
+    } else {
+      setUsersCloudStatus('error');
+      showToast(res.error || 'Gagal menyinkronkan pengguna ke Supabase.', 'error');
+    }
   };
 
   // Real-time Sync & Toast state
@@ -598,23 +912,49 @@ export default function App() {
     }, 3500);
   };
 
-  // CRUD for Budget
+  // CRUD for Budget (with automatic Supabase Cloud sync)
   const handleAddBudget = (newRecord: Omit<BudgetRecord, 'id'>) => {
     const record: BudgetRecord = {
       ...newRecord,
       id: `b-${Date.now()}`
     };
     setBudget(prev => [record, ...prev]);
+    if (isConfigValid(supabaseConfig)) {
+      void upsertBudgetToSupabase(record, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Budget Plan berhasil ditambahkan!');
   };
 
   const handleEditBudget = (id: string, updated: Partial<BudgetRecord>) => {
+    const existing = budget.find(b => b.id === id);
+    const merged = existing ? { ...existing, ...updated } : null;
     setBudget(prev => prev.map(b => b.id === id ? { ...b, ...updated } : b));
+    if (merged && isConfigValid(supabaseConfig)) {
+      void upsertBudgetToSupabase(merged, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Budget Plan berhasil diperbarui!');
   };
 
   const handleDeleteBudget = (id: string) => {
     setBudget(prev => prev.filter(b => b.id !== id));
+    if (isConfigValid(supabaseConfig)) {
+      void deleteBudgetFromSupabase(id, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Budget Plan berhasil dihapus.');
   };
 
@@ -624,32 +964,71 @@ export default function App() {
       ...r,
       id: `b-bulk-${timestamp}-${idx}`
     }));
+    const nextBudget = mode === 'overwrite' ? newRecords : [...newRecords, ...budget];
+    setBudget(nextBudget);
+    if (isConfigValid(supabaseConfig)) {
+      void pushDatabaseToSupabase(
+        { costCenters, masterItems, budget: nextBudget, forecast, realization },
+        supabaseConfig,
+        undefined,
+        { mode, tables: { budget: true, costCenters: true, masterItems: true, forecast: false, realization: false } }
+      ).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     if (mode === 'overwrite') {
-      setBudget(newRecords);
       showToast(`Berhasil menimpa seluruh data Budget Plan dengan ${records.length} baris baru!`);
     } else {
-      setBudget(prev => [...newRecords, ...prev]);
       showToast(`Berhasil menambahkan ${records.length} data Budget Plan baru!`);
     }
   };
 
-  // CRUD for Forecast
+  // CRUD for Forecast (with automatic Supabase Cloud sync)
   const handleAddForecast = (newRecord: Omit<ForecastRecord, 'id'>) => {
     const record: ForecastRecord = {
       ...newRecord,
       id: `f-${Date.now()}`
     };
     setForecast(prev => [record, ...prev]);
+    if (isConfigValid(supabaseConfig)) {
+      void upsertForecastToSupabase(record, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Forecast berhasil ditambahkan!');
   };
 
   const handleEditForecast = (id: string, updated: Partial<ForecastRecord>) => {
+    const existing = forecast.find(f => f.id === id);
+    const merged = existing ? { ...existing, ...updated } : null;
     setForecast(prev => prev.map(f => f.id === id ? { ...f, ...updated } : f));
+    if (merged && isConfigValid(supabaseConfig)) {
+      void upsertForecastToSupabase(merged, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Forecast berhasil diperbarui!');
   };
 
   const handleDeleteForecast = (id: string) => {
     setForecast(prev => prev.filter(f => f.id !== id));
+    if (isConfigValid(supabaseConfig)) {
+      void deleteForecastFromSupabase(id, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Forecast berhasil dihapus.');
   };
 
@@ -659,22 +1038,43 @@ export default function App() {
       ...r,
       id: `f-bulk-${timestamp}-${idx}`
     }));
+    const nextForecast = mode === 'overwrite' ? newRecords : [...newRecords, ...forecast];
+    setForecast(nextForecast);
+    if (isConfigValid(supabaseConfig)) {
+      void pushDatabaseToSupabase(
+        { costCenters, masterItems, budget, forecast: nextForecast, realization },
+        supabaseConfig,
+        undefined,
+        { mode, tables: { forecast: true, costCenters: true, masterItems: true, budget: false, realization: false } }
+      ).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     if (mode === 'overwrite') {
-      setForecast(newRecords);
       showToast(`Berhasil menimpa seluruh data Forecast dengan ${records.length} baris baru!`);
     } else {
-      setForecast(prev => [...newRecords, ...prev]);
       showToast(`Berhasil menambahkan ${records.length} data Forecast baru!`);
     }
   };
 
-  // CRUD for Realization
+  // CRUD for Realization (with automatic Supabase Cloud sync)
   const handleAddRealization = (newRecord: Omit<RealizationRecord, 'id'>) => {
     const record: RealizationRecord = {
       ...newRecord,
       id: `r-${Date.now()}`
     };
     setRealization(prev => [record, ...prev]);
+    if (isConfigValid(supabaseConfig)) {
+      void upsertRealizationToSupabase(record, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
 
     // Check automatic threshold violation
     const itemBudget = budget.filter(b => b.item === record.item).reduce((s, c) => s + c.amount, 0);
@@ -696,12 +1096,30 @@ export default function App() {
   };
 
   const handleEditRealization = (id: string, updated: Partial<RealizationRecord>) => {
+    const existing = realization.find(r => r.id === id);
+    const merged = existing ? { ...existing, ...updated } : null;
     setRealization(prev => prev.map(r => r.id === id ? { ...r, ...updated } : r));
+    if (merged && isConfigValid(supabaseConfig)) {
+      void upsertRealizationToSupabase(merged, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Realisasi Aktual berhasil diperbarui!');
   };
 
   const handleDeleteRealization = (id: string) => {
     setRealization(prev => prev.filter(r => r.id !== id));
+    if (isConfigValid(supabaseConfig)) {
+      void deleteRealizationFromSupabase(id, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast('Data Realisasi Aktual berhasil dihapus.');
   };
 
@@ -711,11 +1129,24 @@ export default function App() {
       ...r,
       id: `r-bulk-${timestamp}-${idx}`
     }));
+    const nextRealization = mode === 'overwrite' ? newRecords : [...newRecords, ...realization];
+    setRealization(nextRealization);
+    if (isConfigValid(supabaseConfig)) {
+      void pushDatabaseToSupabase(
+        { costCenters, masterItems, budget, forecast, realization: nextRealization },
+        supabaseConfig,
+        undefined,
+        { mode, tables: { realization: true, costCenters: true, masterItems: true, budget: false, forecast: false } }
+      ).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     if (mode === 'overwrite') {
-      setRealization(newRecords);
       showToast(`Berhasil menimpa seluruh data Realisasi dengan ${records.length} baris baru!`);
     } else {
-      setRealization(prev => [...newRecords, ...prev]);
       showToast(`Berhasil menambahkan ${records.length} data Realisasi baru!`);
     }
   };
@@ -816,16 +1247,40 @@ export default function App() {
       }
       return [cc, ...prev];
     });
+    if (isConfigValid(supabaseConfig)) {
+      void upsertCostCenterToSupabase(cc, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast(`Cost Center "${cc.code}" berhasil disimpan.`);
   };
 
   const handleEditCostCenter = (updatedCC: MasterCostCenter) => {
     setCostCenters(prev => prev.map(c => c.code === updatedCC.code ? updatedCC : c));
+    if (isConfigValid(supabaseConfig)) {
+      void upsertCostCenterToSupabase(updatedCC, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast(`Cost Center "${updatedCC.code}" berhasil diperbarui.`);
   };
 
   const handleDeleteCostCenter = (code: string) => {
     setCostCenters(prev => prev.filter(c => c.code !== code));
+    if (isConfigValid(supabaseConfig)) {
+      void deleteCostCenterFromSupabase(code, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast(`Cost Center "${code}" berhasil dihapus.`);
   };
 
@@ -839,16 +1294,40 @@ export default function App() {
       }
       return [item, ...prev];
     });
+    if (isConfigValid(supabaseConfig)) {
+      void upsertMasterItemToSupabase(item, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast(`Master Item "${item.code}" berhasil disimpan.`);
   };
 
   const handleEditMasterItem = (updatedItem: MasterItem) => {
     setMasterItems(prev => prev.map(i => i.code === updatedItem.code ? updatedItem : i));
+    if (isConfigValid(supabaseConfig)) {
+      void upsertMasterItemToSupabase(updatedItem, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast(`Master Item "${updatedItem.name || updatedItem.code}" berhasil diperbarui.`);
   };
 
   const handleDeleteMasterItem = (code: string) => {
     setMasterItems(prev => prev.filter(i => i.code !== code));
+    if (isConfigValid(supabaseConfig)) {
+      void deleteMasterItemFromSupabase(code, supabaseConfig).then(res => {
+        if (res.success) {
+          setDbSyncStatus('connected');
+          stampLastSyncNow();
+        }
+      });
+    }
     showToast(`Master Item "${code}" berhasil dihapus.`);
   };
 
@@ -869,9 +1348,34 @@ export default function App() {
     }
   };
 
+  const persistTabSession = (nextUser: UserSession, tab: ActiveTab, activityTimestamp = Date.now()) => {
+    try {
+      sessionStorage.setItem(
+        SESSION_TAB_KEY,
+        JSON.stringify({
+          user: nextUser,
+          activeTab: tab,
+          lastActivityAt: activityTimestamp
+        })
+      );
+      localStorage.setItem(SESSION_ACTIVE_FLAG_KEY, '1');
+    } catch {
+      // Ignore storage quota errors
+    }
+  };
+
+  const clearAllSessionMarkers = () => {
+    try {
+      sessionStorage.removeItem(SESSION_TAB_KEY);
+      localStorage.removeItem(SESSION_ACTIVE_FLAG_KEY);
+    } catch {
+      // Ignore storage access errors
+    }
+  };
+
   const handleLoginSuccess = (userData: Partial<UserSession>) => {
-    setUser(prev => ({
-      ...prev,
+    const loggedInUser: UserSession = {
+      ...user,
       username: userData.username || 'admin',
       displayName: userData.displayName || 'HR Administrator',
       department: 'HR Development',
@@ -884,9 +1388,15 @@ export default function App() {
         hour: '2-digit',
         minute: '2-digit'
       }) + ' WIB'
-    }));
+    };
+    const now = Date.now();
+    lastActivityAtRef.current = now;
+    setUser(loggedInUser);
     setIsAuthenticated(true);
+    setSessionNotice(null);
+    setShowTimeoutWarning(false);
     setCurrentPage('workspace');
+    persistTabSession(loggedInUser, activeTab, now);
     showToast(`Selamat datang, ${userData.displayName || 'Administrator'}!`);
   };
 
@@ -895,11 +1405,175 @@ export default function App() {
   };
 
   const handleExecuteLogout = () => {
+    clearAllSessionMarkers();
+    setUser(prev => ({ ...prev, isLoggedIn: false }));
     setIsAuthenticated(false);
+    setShowTimeoutWarning(false);
+    setSessionNotice(null);
     setCurrentPage('landing');
     setShowLogoutConfirm(false);
     showToast('Sesi kerja Anda telah diakhiri dengan aman.');
   };
+
+  const handleSessionExpired = React.useCallback((reason: 'timeout' | 'tab_closed' = 'timeout') => {
+    clearAllSessionMarkers();
+    setUser(prev => ({ ...prev, isLoggedIn: false }));
+    setIsAuthenticated(false);
+    setShowTimeoutWarning(false);
+    setShowLogoutConfirm(false);
+    setShowSendEmailModal(false);
+    setShowBulkUploadModal(false);
+    setShowDatabaseConsoleModal(false);
+    setShowShortcutsModal(false);
+    setShowRlsFixModal(false);
+    setSessionNotice({ reason, timeoutMinutes: sessionTimeoutMinutes });
+    setCurrentPage('login');
+    showToast(
+      reason === 'tab_closed'
+        ? tr(
+            'Sesi berakhir otomatis karena tab browser ditutup. Silakan login kembali.',
+            'Session ended automatically because the browser tab was closed. Please sign in again.'
+          )
+        : tr(
+            `Sesi berakhir otomatis setelah ${sessionTimeoutMinutes} menit tidak aktif. Silakan login kembali.`,
+            `Session expired automatically after ${sessionTimeoutMinutes} minutes of inactivity. Please sign in again.`
+          ),
+      'error'
+    );
+  }, [sessionTimeoutMinutes, tr]);
+
+  const handleExtendSession = () => {
+    const now = Date.now();
+    lastActivityAtRef.current = now;
+    setShowTimeoutWarning(false);
+    if (isAuthenticated) {
+      persistTabSession(user, activeTab, now);
+    }
+    showToast(
+      tr(
+        `Sesi berhasil diperpanjang (${sessionTimeoutMinutes} menit).`,
+        `Session extended successfully (${sessionTimeoutMinutes} minutes).`
+      )
+    );
+  };
+
+  const handleChangeSessionTimeout = (minutes: number) => {
+    if (!VALID_TIMEOUT_OPTIONS.includes(minutes as (typeof VALID_TIMEOUT_OPTIONS)[number])) return;
+    setSessionTimeoutMinutes(minutes);
+    const now = Date.now();
+    lastActivityAtRef.current = now;
+    setShowTimeoutWarning(false);
+    try {
+      localStorage.setItem(SESSION_TIMEOUT_MINUTES_KEY, String(minutes));
+      if (isAuthenticated) {
+        persistTabSession(user, activeTab, now);
+      }
+    } catch {
+      // Ignore storage access errors
+    }
+    showToast(
+      tr(
+        `Batas waktu sesi (auto-timeout) diatur ke ${minutes} menit.`,
+        `Session idle auto-timeout set to ${minutes} minutes.`
+      )
+    );
+  };
+
+  // Sync activeTab into per-tab sessionStorage while logged in
+  useEffect(() => {
+    if (!isAuthenticated || currentPage !== 'workspace') return;
+    persistTabSession(user, activeTab, lastActivityAtRef.current);
+  }, [activeTab, isAuthenticated, currentPage]);
+
+  // Enterprise Idle Timeout, Background Tab Expiration & Tab-Close Session Guard
+  useEffect(() => {
+    if (!isAuthenticated || currentPage !== 'workspace') return;
+
+    const timeoutMs = sessionTimeoutMinutes * 60_000;
+    const warningSec = sessionTimeoutMinutes <= 1 ? 15 : 60;
+    const warningMs = warningSec * 1000;
+
+    let lastRecordedEventAt = 0;
+
+    const recordActivity = () => {
+      if (showTimeoutWarningRef.current) return;
+      const now = Date.now();
+      if (now - lastRecordedEventAt < 1000) return;
+      lastRecordedEventAt = now;
+      lastActivityAtRef.current = now;
+      try {
+        const raw = sessionStorage.getItem(SESSION_TAB_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          sessionStorage.setItem(
+            SESSION_TAB_KEY,
+            JSON.stringify({ ...parsed, lastActivityAt: now })
+          );
+        }
+      } catch {
+        // Ignore storage errors
+      }
+    };
+
+    const evaluateSession = () => {
+      const elapsed = Date.now() - lastActivityAtRef.current;
+      const remainingMs = timeoutMs - elapsed;
+
+      if (remainingMs <= 0) {
+        handleSessionExpired('timeout');
+        return;
+      }
+
+      if (remainingMs <= warningMs) {
+        setShowTimeoutWarning(true);
+        setTimeoutRemainingSeconds(Math.max(1, Math.ceil(remainingMs / 1000)));
+      } else if (showTimeoutWarningRef.current) {
+        setShowTimeoutWarning(false);
+      }
+    };
+
+    const handleVisibilityOrPageShow = () => {
+      if (document.visibilityState === 'visible') {
+        evaluateSession();
+      }
+    };
+
+    const handlePageHide = () => {
+      // Ensure active session flag is recorded before tab closes (sessionStorage is auto-cleared on tab close)
+      try {
+        localStorage.setItem(SESSION_ACTIVE_FLAG_KEY, '1');
+      } catch {
+        // Ignore storage errors
+      }
+    };
+
+    const activityEvents: (keyof WindowEventMap)[] = [
+      'mousemove',
+      'mousedown',
+      'keydown',
+      'scroll',
+      'touchstart',
+      'pointerdown',
+      'click'
+    ];
+
+    activityEvents.forEach(evt => window.addEventListener(evt, recordActivity, { passive: true }));
+    document.addEventListener('visibilitychange', handleVisibilityOrPageShow);
+    window.addEventListener('pageshow', handleVisibilityOrPageShow);
+    window.addEventListener('pagehide', handlePageHide);
+    window.addEventListener('beforeunload', handlePageHide);
+
+    const intervalId = window.setInterval(evaluateSession, 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+      activityEvents.forEach(evt => window.removeEventListener(evt, recordActivity));
+      document.removeEventListener('visibilitychange', handleVisibilityOrPageShow);
+      window.removeEventListener('pageshow', handleVisibilityOrPageShow);
+      window.removeEventListener('pagehide', handlePageHide);
+      window.removeEventListener('beforeunload', handlePageHide);
+    };
+  }, [isAuthenticated, currentPage, sessionTimeoutMinutes, handleSessionExpired]);
 
   // Global Keyboard Shortcuts Engine & Alt-Key Guide Detection
   useEffect(() => {
@@ -1088,11 +1762,17 @@ export default function App() {
       {currentPage === 'login' && (
         <LoginPage
           onLoginSuccess={handleLoginSuccess}
-          onBackToLanding={() => setCurrentPage('landing')}
+          onBackToLanding={() => {
+            setSessionNotice(null);
+            setCurrentPage('landing');
+          }}
           darkMode={darkMode}
           setDarkMode={setDarkMode}
           activeTheme={activeTheme}
           onSelectTheme={handleSelectTheme}
+          users={users}
+          sessionNotice={sessionNotice}
+          onDismissSessionNotice={() => setSessionNotice(null)}
         />
       )}
 
@@ -1281,6 +1961,8 @@ export default function App() {
                   onDeleteUser={handleDeleteUser}
                   onUpdateUser={handleUpdateUser}
                   onSyncDatabase={handleSyncUserDatabase}
+                  usersCloudStatus={usersCloudStatus}
+                  supabaseProjectUrl={supabaseConfig.projectUrl}
                   currentUser={user}
                   darkMode={darkMode}
                 />
@@ -1340,6 +2022,9 @@ export default function App() {
                   budgetData={budget}
                   forecastData={forecast}
                   realizationData={realization}
+                  sessionTimeoutMinutes={sessionTimeoutMinutes}
+                  onChangeSessionTimeout={handleChangeSessionTimeout}
+                  onUpdateAdminPassword={handleUpdateAdminPassword}
                 />
               )}
             </main>
@@ -1375,6 +2060,7 @@ export default function App() {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onSuccess={handleLoginSuccess}
+        users={users}
         darkMode={darkMode}
       />
 
@@ -1387,6 +2073,17 @@ export default function App() {
         userName={user.displayName || 'HR Administrator'}
         userRole={user.role || 'SuperAdmin'}
         department={user.department || 'HR Development'}
+      />
+
+      {/* Session Idle Timeout Countdown Warning Modal */}
+      <SessionTimeoutModal
+        isOpen={showTimeoutWarning && isAuthenticated && currentPage === 'workspace'}
+        remainingSeconds={timeoutRemainingSeconds}
+        totalWarningSeconds={sessionTimeoutMinutes <= 1 ? 15 : 60}
+        timeoutMinutes={sessionTimeoutMinutes}
+        darkMode={darkMode}
+        onExtendSession={handleExtendSession}
+        onLogoutNow={() => handleSessionExpired('timeout')}
       />
 
       {/* Centralized Keyboard Shortcuts Help Cheatsheet Modal */}

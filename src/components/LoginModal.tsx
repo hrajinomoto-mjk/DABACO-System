@@ -1,15 +1,17 @@
 import React, { useState } from 'react';
 import { Lock, User, Eye, EyeOff, KeyRound, AlertCircle } from 'lucide-react';
 import { AjinomotoLogo } from './AjinomotoLogo';
+import { UserAccount } from '../types';
 
 interface LoginModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: (user: { username: string; displayName: string; role: 'SuperAdmin' | 'BudgetController' | 'Auditor' }) => void;
+  users?: UserAccount[];
   darkMode?: boolean;
 }
 
-export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess, darkMode = true }) => {
+export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSuccess, users, darkMode = true }) => {
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
   const [showPassword, setShowPassword] = useState(false);
@@ -39,21 +41,41 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
       setProgressWidth(100);
       setLoading(false);
 
-      // Check registered users from persistent database
-      let matchedUser = null;
-      try {
-        const storedUsers = localStorage.getItem('dabaco_users');
-        if (storedUsers) {
-          const parsed = JSON.parse(storedUsers);
-          matchedUser = parsed.find((u: any) => u.username?.toLowerCase() === username.trim().toLowerCase());
+      // Check registered users from live cloud-synced users prop (with localStorage fallback)
+      let matchedUser: UserAccount | undefined;
+      const normalizedInput = username.trim().toLowerCase();
+      if (Array.isArray(users) && users.length > 0) {
+        matchedUser = users.find(
+          (u) =>
+            u.username?.toLowerCase() === normalizedInput ||
+            u.email?.toLowerCase() === normalizedInput
+        );
+      }
+      if (!matchedUser) {
+        try {
+          const storedUsers = localStorage.getItem('dabaco_users');
+          if (storedUsers) {
+            const parsed: UserAccount[] = JSON.parse(storedUsers);
+            matchedUser = parsed.find(
+              (u) =>
+                u.username?.toLowerCase() === normalizedInput ||
+                u.email?.toLowerCase() === normalizedInput
+            );
+          }
+        } catch (err) {
+          console.error('Error reading dabaco_users in LoginModal', err);
         }
-      } catch (err) {
-        console.error('Error reading dabaco_users in LoginModal', err);
       }
 
       if (matchedUser) {
-        if (matchedUser.status === 'Inactive') {
+        if (matchedUser.status === 'Suspended' || (matchedUser.status as string) === 'Inactive') {
           setError('Akun ini sedang dinonaktifkan oleh administrator.');
+          setProgressWidth(0);
+          return;
+        }
+
+        if (matchedUser.password && matchedUser.password !== password) {
+          setError('Kata sandi untuk akun ini tidak sesuai. Silakan periksa kembali.');
           setProgressWidth(0);
           return;
         }
@@ -61,7 +83,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({ isOpen, onClose, onSucce
         onSuccess({
           username: matchedUser.username,
           displayName: matchedUser.displayName,
-          role: matchedUser.role
+          role: matchedUser.role as 'SuperAdmin' | 'BudgetController' | 'Auditor'
         });
         onClose();
         return;
