@@ -11,24 +11,38 @@ import {
   UploadCloud,
   RefreshCw,
   AlertCircle,
+  AlertTriangle,
   CheckCircle2,
-  Lock,
-  ArrowDownToLine,
   Layers,
   ShieldAlert,
-  Terminal,
-  Sliders
+  Sliders,
+  RotateCcw,
+  Globe
 } from 'lucide-react';
 import { SupabaseConfig } from '../types';
+import { useLanguage } from '../contexts/LanguageContext';
 import {
   testSupabaseConnection,
+  normalizeSupabaseUrl,
+  normalizeSupabaseAnonKey,
+  extractSupabaseProjectRef,
+  diagnoseSupabaseConfigIssue,
   SUPABASE_RLS_FIX_SQL,
   SUPABASE_ALL_FIX_SQL
 } from '../services/supabaseService';
 
+type SupabaseDiagnosticType =
+  | 'ok'
+  | 'schema_missing'
+  | 'config_invalid'
+  | 'network_or_paused'
+  | 'auth_invalid'
+  | 'rls_blocked'
+  | 'unknown';
+
 interface SupabaseViewProps {
   config: SupabaseConfig;
-  onUpdateConfig: (newConfig: Partial<SupabaseConfig>) => void;
+  onUpdateConfig: (newConfig: Partial<SupabaseConfig>, silent?: boolean) => void;
   darkMode: boolean;
   dataCounts?: {
     costCenters: number;
@@ -44,6 +58,11 @@ interface SupabaseViewProps {
   isLoadingData?: boolean;
   onOpenDatabaseConsole?: () => void;
   dbSyncStatus?: 'connected' | 'empty' | 'unconfigured' | 'error';
+  onSyncStatusChange?: (status: 'connected' | 'empty' | 'unconfigured' | 'error') => void;
+  lastPushError?: {
+    message: string;
+    diagnosticType?: SupabaseDiagnosticType;
+  } | null;
   lastSyncTime?: string | null;
 }
 
@@ -59,14 +78,29 @@ export const SupabaseView: React.FC<SupabaseViewProps> = ({
   isLoadingData = false,
   onOpenDatabaseConsole,
   dbSyncStatus = 'unconfigured',
+  onSyncStatusChange,
+  lastPushError = null,
   lastSyncTime = null
 }) => {
+  const { tr } = useLanguage();
   const [projectUrl, setProjectUrl] = useState(config.projectUrl || '');
   const [anonKey, setAnonKey] = useState(config.anonKey || '');
   const [copiedSql, setCopiedSql] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'sql' | 'documentation'>('overview');
   const [isTesting, setIsTesting] = useState(false);
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [testResult, setTestResult] = useState<{
+    success: boolean;
+    message: string;
+    diagnosticType?: SupabaseDiagnosticType;
+    normalizedUrl?: string;
+  } | null>(null);
+  const [isManualOverride, setIsManualOverride] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('dabaco_supabase_manual_override') === '1';
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     setProjectUrl(config.projectUrl || '');
@@ -187,78 +221,155 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;`;
 
+  const envUrl =
+    typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL
+      ? normalizeSupabaseUrl(import.meta.env.VITE_SUPABASE_URL)
+      : '';
+  const envKey =
+    typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY
+      ? normalizeSupabaseAnonKey(import.meta.env.VITE_SUPABASE_ANON_KEY)
+      : '';
+  const isEnvConfigured = Boolean(envUrl && envKey);
+
+  const normalizedPreviewUrl = normalizeSupabaseUrl(projectUrl);
+  const normalizedPreviewKey = normalizeSupabaseAnonKey(anonKey);
+  const projectRef = extractSupabaseProjectRef(normalizedPreviewUrl);
+  const supabaseDashboardUrl = projectRef
+    ? `https://supabase.com/dashboard/project/${projectRef}`
+    : 'https://supabase.com/dashboard';
+  const liveConfigIssue =
+    projectUrl.trim() || anonKey.trim()
+      ? diagnoseSupabaseConfigIssue({
+          ...config,
+          projectUrl: normalizedPreviewUrl,
+          anonKey: normalizedPreviewKey
+        })
+      : null;
+
   const handleCopySql = () => {
     navigator.clipboard.writeText(supabaseSqlSchema);
     setCopiedSql(true);
     setTimeout(() => setCopiedSql(false), 2000);
   };
 
-  const handleSaveCredentials = () => {
-    onUpdateConfig({
-      projectUrl: projectUrl.trim(),
-      anonKey: anonKey.trim()
-    });
+  const handleSaveCredentials = (silent = false) => {
+    const cleanedUrl = normalizeSupabaseUrl(projectUrl);
+    const cleanedKey = normalizeSupabaseAnonKey(anonKey);
+    setProjectUrl(cleanedUrl);
+    setAnonKey(cleanedKey);
+    if (cleanedUrl && cleanedKey) {
+      setIsManualOverride(true);
+    }
+    onUpdateConfig(
+      {
+        projectUrl: cleanedUrl,
+        anonKey: cleanedKey
+      },
+      silent
+    );
+    return { cleanedUrl, cleanedKey };
+  };
+
+  const handleResetToEnv = () => {
+    if (!isEnvConfigured) return;
+    try {
+      localStorage.removeItem('dabaco_supabase_manual_override');
+    } catch {
+      // Ignore storage access errors
+    }
+    setIsManualOverride(false);
+    setProjectUrl(envUrl);
+    setAnonKey(envKey);
+    setTestResult(null);
+    onUpdateConfig(
+      {
+        projectUrl: envUrl,
+        anonKey: envKey
+      },
+      false
+    );
   };
 
   const handleTestConnection = async () => {
     setIsTesting(true);
     setTestResult(null);
-    handleSaveCredentials();
+    const { cleanedUrl, cleanedKey } = handleSaveCredentials(true);
 
     const tempConfig: SupabaseConfig = {
       ...config,
-      projectUrl: projectUrl.trim(),
-      anonKey: anonKey.trim()
+      projectUrl: cleanedUrl,
+      anonKey: cleanedKey
     };
 
     const res = await testSupabaseConnection(tempConfig);
     setIsTesting(false);
     setTestResult({
       success: res.success,
-      message: res.message || (res.success ? 'Koneksi ke Supabase berhasil!' : 'Koneksi gagal.')
+      message: res.message || (res.success ? 'Koneksi ke Supabase berhasil!' : 'Koneksi gagal.'),
+      diagnosticType: res.diagnosticType,
+      normalizedUrl: res.normalizedUrl || cleanedUrl
     });
 
     if (res.success) {
-      onUpdateConfig({
-        projectUrl: projectUrl.trim(),
-        anonKey: anonKey.trim(),
-        status: 'connected',
-        lastBackupTime: new Date().toISOString()
-      });
+      onSyncStatusChange?.(res.diagnosticType === 'schema_missing' ? 'empty' : 'connected');
+      onUpdateConfig(
+        {
+          projectUrl: cleanedUrl,
+          anonKey: cleanedKey,
+          status: 'connected',
+          lastBackupTime: new Date().toISOString()
+        },
+        true
+      );
     } else {
-      onUpdateConfig({
-        projectUrl: projectUrl.trim(),
-        anonKey: anonKey.trim(),
-        status: 'disconnected'
-      });
+      onSyncStatusChange?.(res.diagnosticType === 'config_invalid' ? 'unconfigured' : 'error');
+      onUpdateConfig(
+        {
+          projectUrl: cleanedUrl,
+          anonKey: cleanedKey,
+          status: 'disconnected'
+        },
+        true
+      );
     }
   };
 
   const handleTriggerPush = async () => {
-    handleSaveCredentials();
+    setTestResult(null);
+    const { cleanedUrl, cleanedKey } = handleSaveCredentials(true);
     if (onPushData) {
       await onPushData({
-        projectUrl: projectUrl.trim(),
-        anonKey: anonKey.trim()
+        projectUrl: cleanedUrl,
+        anonKey: cleanedKey
       });
     }
   };
 
   const handleTriggerReload = async () => {
-    handleSaveCredentials();
+    setTestResult(null);
+    const { cleanedUrl, cleanedKey } = handleSaveCredentials(true);
     if (onReloadData) {
       await onReloadData({
-        projectUrl: projectUrl.trim(),
-        anonKey: anonKey.trim()
+        projectUrl: cleanedUrl,
+        anonKey: cleanedKey
       });
     }
   };
 
-  const isEnvConfigured = Boolean(
-    typeof import.meta !== 'undefined' &&
-    import.meta.env?.VITE_SUPABASE_URL &&
-    import.meta.env?.VITE_SUPABASE_ANON_KEY
-  );
+  const activeError =
+    testResult && !testResult.success
+      ? {
+          message: testResult.message,
+          diagnosticType: testResult.diagnosticType,
+          normalizedUrl: testResult.normalizedUrl || normalizedPreviewUrl
+        }
+      : lastPushError
+        ? {
+            message: lastPushError.message,
+            diagnosticType: lastPushError.diagnosticType,
+            normalizedUrl: normalizedPreviewUrl
+          }
+        : null;
 
   return (
     <div className="space-y-6 pb-12">
@@ -311,35 +422,71 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
       </div>
 
       {/* Real-time Status Card & Cloud Sync Controller */}
-      <div className="p-6 rounded-3xl bg-gradient-to-br from-emerald-950/20 via-slate-900/60 to-slate-900 border border-emerald-500/20 shadow-lg space-y-4">
+      <div
+        className={`p-6 rounded-3xl border space-y-4 transition-colors ${
+          darkMode
+            ? 'bg-gradient-to-br from-emerald-950/20 via-slate-900/80 to-slate-900 border-emerald-500/20 shadow-lg'
+            : 'bg-white border-slate-200/90 shadow-sm'
+        }`}
+      >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <span className="relative flex h-3.5 w-3.5">
-              <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
-                dbSyncStatus === 'connected' ? 'bg-emerald-400' :
-                dbSyncStatus === 'empty' ? 'bg-amber-400' : 'bg-rose-400'
-              }`} />
-              <span className={`relative inline-flex rounded-full h-3.5 w-3.5 ${
-                dbSyncStatus === 'connected' ? 'bg-emerald-500' :
-                dbSyncStatus === 'empty' ? 'bg-amber-500' : 'bg-rose-500'
-              }`} />
+            <span className="relative flex h-3.5 w-3.5 shrink-0">
+              <span
+                className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                  dbSyncStatus === 'connected'
+                    ? 'bg-emerald-400'
+                    : dbSyncStatus === 'empty'
+                      ? 'bg-amber-400'
+                      : 'bg-rose-400'
+                }`}
+              />
+              <span
+                className={`relative inline-flex rounded-full h-3.5 w-3.5 ${
+                  dbSyncStatus === 'connected'
+                    ? 'bg-emerald-500'
+                    : dbSyncStatus === 'empty'
+                      ? 'bg-amber-500'
+                      : 'bg-rose-500'
+                }`}
+              />
             </span>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                Status Penyimpanan:
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
-                  dbSyncStatus === 'connected' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                  dbSyncStatus === 'empty' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                  'bg-rose-500/20 text-rose-400 border border-rose-500/30'
-                }`}>
+              <h3
+                className={`text-sm font-bold flex flex-wrap items-center gap-2 ${
+                  darkMode ? 'text-white' : 'text-slate-900'
+                }`}
+              >
+                <span>Status Penyimpanan:</span>
+                <span
+                  className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${
+                    dbSyncStatus === 'connected'
+                      ? darkMode
+                        ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : dbSyncStatus === 'empty'
+                        ? darkMode
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          : 'bg-amber-50 text-amber-700 border-amber-200'
+                        : darkMode
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                          : 'bg-rose-50 text-rose-700 border-rose-200'
+                  }`}
+                >
                   {dbSyncStatus === 'connected' && 'Terhubung ke Database (Cloud Live)'}
                   {dbSyncStatus === 'empty' && 'Tabel Supabase Kosong (Perlu Push Awal)'}
                   {dbSyncStatus === 'unconfigured' && 'Kredensial Belum Lengkap'}
-                  {dbSyncStatus === 'error' && 'Gagal Memuat dari Supabase'}
+                  {dbSyncStatus === 'error' && (
+                    <span data-i18n-native="true">
+                      {tr('Gagal Terhubung ke Supabase', 'Failed to Connect to Supabase')}
+                    </span>
+                  )}
                 </span>
               </h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                {lastSyncTime ? `Sinkronisasi terakhir: pukul ${lastSyncTime} WIB` : 'Otomatis memuat data dari database saat aplikasi dibuka'}
+              <p className={`text-xs mt-0.5 ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                {lastSyncTime
+                  ? `Sinkronisasi terakhir: pukul ${lastSyncTime} WIB`
+                  : 'Otomatis memuat data dari database saat aplikasi dibuka'}
               </p>
             </div>
           </div>
@@ -348,10 +495,16 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
             <button
               onClick={handleTriggerReload}
               disabled={isLoadingData}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition cursor-pointer disabled:opacity-50"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold border transition cursor-pointer disabled:opacity-50 ${
+                darkMode
+                  ? 'bg-slate-800 hover:bg-slate-700 text-slate-200 border-slate-700'
+                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700 border-slate-300'
+              }`}
               title="Tarik ulang data terbaru langsung dari Supabase"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin text-emerald-400' : ''}`} />
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${isLoadingData ? 'animate-spin text-emerald-500' : ''}`}
+              />
               <span>{isLoadingData ? 'Memuat Data...' : 'Reload dari Database'}</span>
             </button>
             <button
@@ -368,49 +521,245 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
 
         {/* Push Progress Notification */}
         {isPushing && (
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs flex items-center gap-2.5 animate-pulse">
+          <div
+            className={`p-3 rounded-xl border text-xs flex items-center gap-2.5 animate-pulse ${
+              darkMode
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            }`}
+          >
             <UploadCloud className="w-4 h-4 shrink-0" />
-            <span className="font-semibold">{pushProgress || 'Sedang mengunggah data ke Supabase...'}</span>
+            <span className="font-semibold">
+              {pushProgress || 'Sedang mengunggah data ke Supabase...'}
+            </span>
           </div>
         )}
 
-        {/* Dataset Breakdown Pills */}
-        <div className="pt-3 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-5 gap-2 text-center text-xs">
-          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-800">
-            <div className="text-[10px] text-slate-400 font-medium">Cost Centers</div>
-            <div className="text-base font-bold text-white">{dataCounts.costCenters}</div>
+        {/* Dataset Breakdown Tiles */}
+        <div
+          className={`pt-3 border-t grid grid-cols-2 sm:grid-cols-5 gap-2.5 text-center text-xs ${
+            darkMode ? 'border-slate-800' : 'border-slate-200'
+          }`}
+        >
+          <div
+            className={`p-2.5 rounded-xl border ${
+              darkMode
+                ? 'bg-slate-800/60 border-slate-800'
+                : 'bg-slate-50 border-slate-200/80'
+            }`}
+          >
+            <div className={`text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Cost Centers
+            </div>
+            <div className={`text-base font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              {dataCounts.costCenters}
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-800">
-            <div className="text-[10px] text-slate-400 font-medium">Master Items</div>
-            <div className="text-base font-bold text-white">{dataCounts.masterItems}</div>
+          <div
+            className={`p-2.5 rounded-xl border ${
+              darkMode
+                ? 'bg-slate-800/60 border-slate-800'
+                : 'bg-slate-50 border-slate-200/80'
+            }`}
+          >
+            <div className={`text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Master Items
+            </div>
+            <div className={`text-base font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+              {dataCounts.masterItems}
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-800">
-            <div className="text-[10px] text-slate-400 font-medium">Budget Plan</div>
-            <div className="text-base font-bold text-blue-400">{dataCounts.budget}</div>
+          <div
+            className={`p-2.5 rounded-xl border ${
+              darkMode
+                ? 'bg-slate-800/60 border-slate-800'
+                : 'bg-slate-50 border-slate-200/80'
+            }`}
+          >
+            <div className={`text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Budget Plan
+            </div>
+            <div className={`text-base font-bold ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+              {dataCounts.budget}
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-800">
-            <div className="text-[10px] text-slate-400 font-medium">Forecast</div>
-            <div className="text-base font-bold text-amber-400">{dataCounts.forecast}</div>
+          <div
+            className={`p-2.5 rounded-xl border ${
+              darkMode
+                ? 'bg-slate-800/60 border-slate-800'
+                : 'bg-slate-50 border-slate-200/80'
+            }`}
+          >
+            <div className={`text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Forecast
+            </div>
+            <div className={`text-base font-bold ${darkMode ? 'text-amber-400' : 'text-amber-600'}`}>
+              {dataCounts.forecast}
+            </div>
           </div>
-          <div className="p-2.5 rounded-xl bg-slate-800/60 border border-slate-800 col-span-2 sm:col-span-1">
-            <div className="text-[10px] text-slate-400 font-medium">Realisasi Kas</div>
-            <div className="text-base font-bold text-emerald-400">{dataCounts.realization}</div>
+          <div
+            className={`p-2.5 rounded-xl border col-span-2 sm:col-span-1 ${
+              darkMode
+                ? 'bg-slate-800/60 border-slate-800'
+                : 'bg-slate-50 border-slate-200/80'
+            }`}
+          >
+            <div className={`text-[11px] font-medium ${darkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+              Realisasi Kas
+            </div>
+            <div className={`text-base font-bold ${darkMode ? 'text-emerald-400' : 'text-emerald-600'}`}>
+              {dataCounts.realization}
+            </div>
           </div>
         </div>
       </div>
 
-      {testResult && (
-        <div className={`p-4 rounded-2xl text-xs flex items-center gap-2.5 border ${
-          testResult.success
-            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400'
-            : 'bg-rose-500/10 border-rose-500/30 text-rose-400'
-        }`}>
-          {testResult.success ? (
-            <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
-          ) : (
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-          )}
+      {/* Success Banner */}
+      {testResult?.success && (
+        <div
+          className={`p-4 rounded-2xl text-xs flex items-center gap-2.5 border ${
+            darkMode
+              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+          }`}
+        >
+          <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
           <span>{testResult.message}</span>
+        </div>
+      )}
+
+      {/* Actionable Diagnostic & Troubleshooting Panel (Bilingual Native) */}
+      {activeError && (
+        <div
+          data-i18n-native="true"
+          className={`p-5 rounded-3xl border space-y-4 ${
+            darkMode
+              ? 'bg-rose-950/20 border-rose-500/30 text-rose-200'
+              : 'bg-rose-50/80 border-rose-200 text-rose-900'
+          }`}
+        >
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle className="w-5 h-5 shrink-0 text-rose-500 mt-0.5" />
+              <div className="space-y-1">
+                <h4 className={`text-sm font-bold ${darkMode ? 'text-rose-200' : 'text-rose-900'}`}>
+                  {tr(
+                    'Koneksi / Push ke Supabase Gagal — Diagnostik Otomatis',
+                    'Supabase Connection / Push Failed — Automated Diagnostics'
+                  )}
+                </h4>
+                <p className={`text-xs leading-relaxed ${darkMode ? 'text-rose-300' : 'text-rose-700'}`}>
+                  {activeError.message}
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-1 text-[11px]">
+                  <span
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-mono border ${
+                      darkMode
+                        ? 'bg-slate-900/70 border-slate-700 text-slate-300'
+                        : 'bg-white border-rose-200 text-slate-700'
+                    }`}
+                  >
+                    <Globe className="w-3 h-3 text-rose-500" />
+                    {activeError.normalizedUrl || tr('(URL kosong)', '(Empty URL)')}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 rounded-md font-semibold border ${
+                      darkMode
+                        ? 'bg-slate-900/70 border-slate-700 text-slate-300'
+                        : 'bg-white border-rose-200 text-slate-700'
+                    }`}
+                  >
+                    {tr('Sumber:', 'Source:')}{' '}
+                    {isEnvConfigured && !isManualOverride
+                      ? 'Vercel Environment'
+                      : tr('Input Manual Browser', 'Manual Browser Storage')}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <a
+                href={supabaseDashboardUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-sm transition"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                <span>{tr('Buka Supabase Dashboard', 'Open Supabase Dashboard')}</span>
+              </a>
+              {activeError.diagnosticType === 'rls_blocked' && (
+                <button
+                  onClick={() => setActiveTab('sql')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition cursor-pointer"
+                >
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  <span>{tr('Buka Skrip Perbaikan RLS', 'Open RLS Fix Script')}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {(activeError.diagnosticType === 'network_or_paused' ||
+            activeError.diagnosticType === 'config_invalid' ||
+            activeError.diagnosticType === 'unknown' ||
+            !activeError.diagnosticType) && (
+            <div
+              className={`p-4 rounded-2xl border text-xs space-y-2.5 ${
+                darkMode
+                  ? 'bg-slate-900/70 border-slate-800 text-slate-300'
+                  : 'bg-white border-rose-200/80 text-slate-700'
+              }`}
+            >
+              <div className={`font-bold flex items-center gap-1.5 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <span>
+                  {tr(
+                    'Checklist Penyebab Utama "Failed to fetch" (Termasuk Setelah Ganti Domain Vercel):',
+                    'Top Causes of "Failed to fetch" (Including After Vercel Domain Rename):'
+                  )}
+                </span>
+              </div>
+              <ol className="list-decimal list-inside space-y-1.5 leading-relaxed">
+                <li>
+                  <strong className={darkMode ? 'text-white' : 'text-slate-900'}>
+                    {tr('Proyek Supabase sedang Paused (Paling Sering):', 'Supabase Project is Paused (Most Common):')}
+                  </strong>{' '}
+                  {tr(
+                    'Paket Free Tier Supabase otomatis menjeda database jika tidak aktif >7 hari. Klik "Buka Supabase Dashboard" di atas — jika muncul status Paused, klik Restore project lalu tunggu 1–2 menit.',
+                    'Supabase Free Tier auto-pauses projects after 7 days of inactivity. Click "Open Supabase Dashboard" above — if Paused, click Restore project and wait 1–2 minutes.'
+                  )}
+                </li>
+                <li>
+                  <strong className={darkMode ? 'text-white' : 'text-slate-900'}>
+                    {tr('Dampak Ganti Domain Vercel (dabacosystem.vercel.app):', 'Impact of Vercel Domain Rename (dabacosystem.vercel.app):')}
+                  </strong>{' '}
+                  {tr(
+                    'Mengubah domain Vercel tidak memblokir REST API Supabase, namun penyimpanan browser (localStorage) bersifat per-domain sehingga kredensial manual di domain lama tidak otomatis terbawa. Pastikan VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY aktif di Vercel → Settings → Environment Variables lalu lakukan Redeploy, serta perbarui Site URL di Supabase → Authentication → URL Configuration menjadi https://dabacosystem.vercel.app.',
+                    'Renaming a Vercel domain does not block Supabase REST CORS, but browser localStorage is per-origin so manually saved credentials from the old domain do not carry over. Verify VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY in Vercel → Settings → Environment Variables, trigger a Redeploy, and update Site URL in Supabase → Authentication → URL Configuration to https://dabacosystem.vercel.app.'
+                  )}
+                </li>
+                <li>
+                  <strong className={darkMode ? 'text-white' : 'text-slate-900'}>
+                    {tr('Verifikasi Format Project URL & Anon Key:', 'Verify Project URL & Anon Key Format:')}
+                  </strong>{' '}
+                  {tr(
+                    'Pastikan Project URL berakhiran .supabase.co (bukan URL Vercel/Dashboard) dan Public Anon Key disalin utuh tanpa spasi/baris baru terpotong.',
+                    'Ensure Project URL ends with .supabase.co (not a Vercel or Dashboard URL) and the Public Anon Key is copied completely without truncation.'
+                  )}
+                </li>
+                <li>
+                  <strong className={darkMode ? 'text-white' : 'text-slate-900'}>
+                    {tr('Firewall Jaringan Kantor / DNS / AdBlocker:', 'Corporate Firewall / DNS / AdBlocker:')}
+                  </strong>{' '}
+                  {tr(
+                    'Sebagian jaringan kantor/pabrik atau ekstensi browser memblokir *.supabase.co. Coba uji sejenak melalui hotspot seluler atau mode Incognito untuk memastikan bukan blokir jaringan.',
+                    'Some corporate/factory networks or browser extensions block *.supabase.co. Test briefly on mobile hotspot or Incognito mode to rule out network blocking.'
+                  )}
+                </li>
+              </ol>
+            </div>
+          )}
         </div>
       )}
 
@@ -452,24 +801,59 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
       {activeTab === 'overview' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="font-bold text-base text-slate-900 dark:text-white flex items-center gap-2">
                 <Key className="w-4 h-4 text-emerald-500" />
                 Kredensial API Supabase
               </h3>
-              <button
-                onClick={handleSaveCredentials}
-                className="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition"
-              >
-                Simpan Kredensial
-              </button>
+              <div className="flex items-center gap-2">
+                {isEnvConfigured && isManualOverride && (
+                  <button
+                    onClick={handleResetToEnv}
+                    data-i18n-native="true"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-300 dark:border-slate-700 hover:bg-slate-200 dark:hover:bg-slate-700 transition cursor-pointer"
+                    title={tr('Kembalikan ke Environment Variables Vercel', 'Revert to Vercel Environment Variables')}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    <span>{tr('Gunakan Env Vercel', 'Use Vercel Env')}</span>
+                  </button>
+                )}
+                <button
+                  onClick={() => handleSaveCredentials(false)}
+                  className="px-3 py-1 rounded-lg text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900 transition cursor-pointer"
+                >
+                  Simpan Kredensial
+                </button>
+              </div>
             </div>
 
             {isEnvConfigured && (
-              <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2.5">
+              <div
+                data-i18n-native="true"
+                className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-700 dark:text-emerald-300 text-xs flex items-center gap-2.5"
+              >
                 <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
                 <div>
-                  <span className="font-bold">Environment Variables Terdeteksi:</span> Kredensial aktif dimuat dari sistem environment (<code className="px-1 py-0.5 rounded bg-emerald-500/15 font-mono text-[10px]">VITE_SUPABASE_URL</code>).
+                  <span className="font-bold">
+                    {tr('Environment Variables Terdeteksi:', 'Environment Variables Detected:')}
+                  </span>{' '}
+                  {isManualOverride ? (
+                    tr(
+                      'Override manual browser sedang aktif. Klik "Gunakan Env Vercel" untuk kembali memakai environment server.',
+                      'Manual browser override is active. Click "Use Vercel Env" to revert to server environment variables.'
+                    )
+                  ) : (
+                    <>
+                      {tr(
+                        'Kredensial aktif dimuat dari sistem environment (',
+                        'Active credentials loaded from system environment ('
+                      )}
+                      <code className="px-1 py-0.5 rounded bg-emerald-500/15 font-mono text-[10px]">
+                        VITE_SUPABASE_URL
+                      </code>
+                      ).
+                    </>
+                  )}
                 </div>
               </div>
             )}
@@ -482,7 +866,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
                   value={projectUrl}
                   onChange={(e) => {
                     setProjectUrl(e.target.value);
-                    onUpdateConfig({ projectUrl: e.target.value });
+                    onUpdateConfig({ projectUrl: e.target.value }, true);
+                  }}
+                  onBlur={() => {
+                    const cleaned = normalizeSupabaseUrl(projectUrl);
+                    if (cleaned !== projectUrl) {
+                      setProjectUrl(cleaned);
+                      onUpdateConfig({ projectUrl: cleaned }, true);
+                    }
                   }}
                   placeholder="https://your-project.supabase.co"
                   className="w-full p-2.5 rounded-xl border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white font-mono"
@@ -495,7 +886,14 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
                   value={anonKey}
                   onChange={(e) => {
                     setAnonKey(e.target.value);
-                    onUpdateConfig({ anonKey: e.target.value });
+                    onUpdateConfig({ anonKey: e.target.value }, true);
+                  }}
+                  onBlur={() => {
+                    const cleaned = normalizeSupabaseAnonKey(anonKey);
+                    if (cleaned !== anonKey) {
+                      setAnonKey(cleaned);
+                      onUpdateConfig({ anonKey: cleaned }, true);
+                    }
                   }}
                   rows={3}
                   placeholder="eyJhbGciOi..."
@@ -503,8 +901,29 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;`;
                 />
               </div>
 
-              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">
-                Kunci anon digunakan untuk operasi query terlindungi Row-Level Security (RLS). Seluruh transaksi diverifikasi dengan token otentikasi PostgreSQL.
+              {liveConfigIssue && (
+                <div
+                  className={`p-3 rounded-2xl border text-[11px] flex items-start gap-2 ${
+                    darkMode
+                      ? 'bg-amber-950/30 border-amber-500/30 text-amber-300'
+                      : 'bg-amber-50 border-amber-200 text-amber-800'
+                  }`}
+                >
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-500 mt-0.5" />
+                  <span>{liveConfigIssue}</span>
+                </div>
+              )}
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed space-y-1">
+                <p>
+                  Kunci anon digunakan untuk operasi query terlindungi Row-Level Security (RLS). Seluruh transaksi diverifikasi dengan token otentikasi PostgreSQL.
+                </p>
+                <p data-i18n-native="true" className="text-[10px] opacity-80">
+                  {tr(
+                    'Spasi, tanda kutip, atau baris baru tak sengaja pada Project URL & Anon Key akan dibersihkan otomatis.',
+                    'Accidental spaces, quotes, or line breaks in Project URL & Anon Key are automatically cleaned.'
+                  )}
+                </p>
               </div>
             </div>
           </div>

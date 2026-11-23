@@ -136,33 +136,134 @@ export function ensureUUID(id: string): string {
   return `${raw.slice(0, 8)}-${raw.slice(8, 12)}-4${raw.slice(13, 16)}-a${raw.slice(17, 20)}-${raw.slice(20, 32)}`;
 }
 
-export function isConfigValid(config?: SupabaseConfig | null): boolean {
-  if (!config) return false;
-  const url = config.projectUrl?.trim();
-  const key = config.anonKey?.trim();
-  if (!url || !key) return false;
+/**
+ * Sanitize & normalize a Supabase Project URL:
+ * - Strips accidental quotes/backticks/whitespace from .env copy-paste
+ * - Auto-converts Supabase Dashboard URLs (https://supabase.com/dashboard/project/<ref>) to https://<ref>.supabase.co
+ * - Auto-prepends https:// if missing
+ * - Strips trailing slashes and accidental /rest/v1 suffixes
+ */
+export function normalizeSupabaseUrl(rawUrl?: string | null): string {
+  if (!rawUrl) return '';
+  let cleaned = String(rawUrl)
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, '')
+    .replace(/\s+/g, '');
+
+  if (!cleaned) return '';
+
+  // Auto-convert Supabase Dashboard URL to API Project URL
+  const dashboardMatch = cleaned.match(/supabase\.com\/dashboard\/project\/([a-z0-9-]+)/i);
+  if (dashboardMatch && dashboardMatch[1]) {
+    return `https://${dashboardMatch[1].toLowerCase()}.supabase.co`;
+  }
+
+  // Prepend https:// if user pasted bare host like "xyz.supabase.co"
+  if (!/^https?:\/\//i.test(cleaned) && /^[a-z0-9.-]+\.[a-z]{2,}/i.test(cleaned)) {
+    cleaned = `https://${cleaned}`;
+  }
+
+  try {
+    const parsed = new URL(cleaned);
+    // Keep only protocol + host (strip /rest/v1 or trailing slashes)
+    return `${parsed.protocol}//${parsed.host}`;
+  } catch {
+    return cleaned.replace(/\/+$/, '');
+  }
+}
+
+/**
+ * Sanitize a Supabase Public Anon Key:
+ * - Removes surrounding quotes and ALL internal whitespace/line breaks
+ *   (newlines inside <textarea> cause Chrome/Edge fetch() to fail with TypeError: Failed to fetch)
+ */
+export function normalizeSupabaseAnonKey(rawKey?: string | null): string {
+  if (!rawKey) return '';
+  return String(rawKey)
+    .trim()
+    .replace(/^['"`]+|['"`]+$/g, '')
+    .replace(/\s+/g, '');
+}
+
+export function normalizeSupabaseConfig(config: SupabaseConfig): SupabaseConfig {
+  return {
+    ...config,
+    projectUrl: normalizeSupabaseUrl(config.projectUrl),
+    anonKey: normalizeSupabaseAnonKey(config.anonKey)
+  };
+}
+
+export function extractSupabaseProjectRef(rawUrl?: string | null): string | null {
+  const normalized = normalizeSupabaseUrl(rawUrl);
+  const match = normalized.match(/^https?:\/\/([a-z0-9-]+)\.supabase\.(co|in|net)$/i);
+  return match ? match[1] : null;
+}
+
+export function diagnoseSupabaseConfigIssue(config?: SupabaseConfig | null): string | null {
+  if (!config) return 'Kredensial Supabase belum dikonfigurasi.';
+  const url = normalizeSupabaseUrl(config.projectUrl);
+  const key = normalizeSupabaseAnonKey(config.anonKey);
+
+  if (!url) return 'Project URL Supabase belum diisi.';
+  if (!key) return 'Public Anon Key Supabase belum diisi.';
+
   if (
     url === 'https://your-project.supabase.co' ||
     url.includes('your-project') ||
     url.includes('dabaco-ajinomoto-prod') ||
     key.includes('dabaco_encrypted_signature_demo')
   ) {
-    return false;
+    return 'Kredensial masih menggunakan contoh bawaan. Silakan masukkan Project URL & Anon Key asli dari Supabase.';
   }
+
   try {
     const parsed = new URL(url);
-    return (parsed.protocol === 'https:' || parsed.protocol === 'http:') && key.length > 25;
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return 'Project URL harus diawali dengan https://';
+    }
+    if (parsed.hostname.endsWith('.vercel.app') || parsed.hostname === 'vercel.com') {
+      return 'URL yang dimasukkan adalah domain Vercel, bukan Project URL Supabase. Gunakan URL berakhiran .supabase.co dari Supabase → Project Settings → API.';
+    }
+    if (parsed.hostname === 'supabase.com' || parsed.hostname === 'app.supabase.com') {
+      return 'URL yang dimasukkan adalah alamat Dashboard Supabase. Gunakan Project URL berformat https://[project-ref].supabase.co.';
+    }
   } catch {
-    return false;
+    return 'Format Project URL tidak valid. Pastikan berformat https://[project-ref].supabase.co.';
   }
+
+  if (key.length < 30) {
+    return 'Public Anon Key terlalu pendek atau terpotong. Salin ulang key lengkap dari Supabase → Project Settings → API.';
+  }
+
+  return null;
+}
+
+export function isConfigValid(config?: SupabaseConfig | null): boolean {
+  return diagnoseSupabaseConfigIssue(config) === null;
+}
+
+export function isNetworkFetchError(errOrMsg: unknown): boolean {
+  const msg = typeof errOrMsg === 'string'
+    ? errOrMsg
+    : String((errOrMsg as { message?: string })?.message || errOrMsg || '');
+  const lower = msg.toLowerCase();
+  return (
+    lower.includes('failed to fetch') ||
+    lower.includes('networkerror') ||
+    lower.includes('network request failed') ||
+    lower.includes('load failed') ||
+    lower.includes('err_name_not_resolved') ||
+    lower.includes('err_connection') ||
+    lower.includes('fetch failed')
+  );
 }
 
 export function getSupabaseClient(config?: SupabaseConfig | null): SupabaseClient | null {
   if (!isConfigValid(config)) {
     return null;
   }
-  const url = config!.projectUrl.trim();
-  const key = config!.anonKey.trim();
+  const url = normalizeSupabaseUrl(config!.projectUrl);
+  const key = normalizeSupabaseAnonKey(config!.anonKey);
 
   if (cachedClient && cachedUrl === url && cachedKey === key) {
     return cachedClient;
@@ -170,7 +271,11 @@ export function getSupabaseClient(config?: SupabaseConfig | null): SupabaseClien
 
   try {
     cachedClient = createClient(url, key, {
-      auth: { persistSession: false },
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false
+      },
       db: { schema: 'public' }
     });
     cachedUrl = url;
@@ -345,6 +450,8 @@ export interface PushResult {
   success: boolean;
   error?: string;
   isRlsError?: boolean;
+  isNetworkError?: boolean;
+  diagnosticType?: 'ok' | 'config_invalid' | 'network_or_paused' | 'auth_invalid' | 'rls_blocked' | 'unknown';
   modeUsed?: 'append' | 'overwrite';
   counts?: {
     costCenters: number;
@@ -490,11 +597,13 @@ export async function pushDatabaseToSupabase(
   onProgress?: (step: string) => void,
   options?: PushOptions
 ): Promise<PushResult> {
+  const configIssue = diagnoseSupabaseConfigIssue(config);
   const client = getSupabaseClient(config);
-  if (!client) {
+  if (!client || configIssue) {
     return {
       success: false,
-      error: 'Koneksi Supabase belum dikonfigurasi atau URL/Key tidak valid.'
+      diagnosticType: 'config_invalid',
+      error: configIssue || 'Koneksi Supabase belum dikonfigurasi atau URL/Key tidak valid.'
     };
   }
 
@@ -675,10 +784,36 @@ export async function pushDatabaseToSupabase(
 
     const wrapTableError = (table: string, err: any): Error => {
       const rawMsg = err?.message || String(err);
+      if (isNetworkFetchError(rawMsg)) {
+        return new Error(`Gagal menghubungi server Supabase pada tabel ${table} (Failed to fetch). Pastikan proyek Supabase aktif (tidak Paused), Project URL benar, dan jaringan tidak memblokir *.supabase.co.`);
+      }
       if (rawMsg.toLowerCase().includes('violates row-level security policy') || rawMsg.toLowerCase().includes('row-level security')) {
         return new Error(`Gagal push ${table}: new row violates row-level security policy for table "${table}". Database Supabase Anda memblokir izin simpan karena pembatasan Row-Level Security (RLS).`);
       }
       return new Error(`Gagal push ${table}: ${rawMsg}`);
+    };
+
+    // Chunked upsert with 1 automatic retry for transient cold-start / network blips
+    const upsertInChunks = async (
+      table: string,
+      rows: Record<string, any>[],
+      onConflict: string,
+      chunkSize = 200
+    ) => {
+      for (let i = 0; i < rows.length; i += chunkSize) {
+        const chunk = rows.slice(i, i + chunkSize);
+        let attempt = 0;
+        while (attempt < 2) {
+          const { error } = await client.from(table).upsert(chunk, { onConflict });
+          if (!error) break;
+          if (attempt === 0 && isNetworkFetchError(error.message)) {
+            attempt++;
+            await new Promise((resolve) => setTimeout(resolve, 600));
+            continue;
+          }
+          throw wrapTableError(table, error);
+        }
+      }
     };
 
     // If Overwrite mode is chosen: delete existing records from chosen tables first (in reverse dependency order)
@@ -731,10 +866,7 @@ export async function pushDatabaseToSupabase(
 
     if (selectedTables.costCenters && costCenterRows.length > 0) {
       onProgress?.('Mengunggah Master Cost Center...');
-      const { error: ccErr } = await client
-        .from('master_cost_center')
-        .upsert(costCenterRows, { onConflict: 'code' });
-      if (ccErr) throw wrapTableError('master_cost_center', ccErr);
+      await upsertInChunks('master_cost_center', costCenterRows, 'code');
     }
 
     // Upload master items
@@ -747,10 +879,7 @@ export async function pushDatabaseToSupabase(
 
     if (selectedTables.masterItems && itemRows.length > 0) {
       onProgress?.('Mengunggah Master Items & Biaya...');
-      const { error: itErr } = await client
-        .from('master_items')
-        .upsert(itemRows, { onConflict: 'code' });
-      if (itErr) throw wrapTableError('master_items', itErr);
+      await upsertInChunks('master_items', itemRows, 'code');
     }
 
     // 3. Push Budget Plan
@@ -765,10 +894,7 @@ export async function pushDatabaseToSupabase(
 
     if (selectedTables.budget && budgetRows.length > 0) {
       onProgress?.('Mengunggah data Rencana Anggaran (Budget Plan)...');
-      const { error: bErr } = await client
-        .from('budget_plan')
-        .upsert(budgetRows, { onConflict: 'id' });
-      if (bErr) throw wrapTableError('budget_plan', bErr);
+      await upsertInChunks('budget_plan', budgetRows, 'id');
     }
 
     // 4. Push Forecast
@@ -783,10 +909,7 @@ export async function pushDatabaseToSupabase(
 
     if (selectedTables.forecast && forecastRows.length > 0) {
       onProgress?.('Mengunggah data Proyeksi Anggaran (Forecast)...');
-      const { error: fErr } = await client
-        .from('forecast')
-        .upsert(forecastRows, { onConflict: 'id' });
-      if (fErr) throw wrapTableError('forecast', fErr);
+      await upsertInChunks('forecast', forecastRows, 'id');
     }
 
     // 5. Push Realization
@@ -806,15 +929,13 @@ export async function pushDatabaseToSupabase(
 
     if (selectedTables.realization && realizationRows.length > 0) {
       onProgress?.('Mengunggah data Realisasi Transaksi Kas...');
-      const { error: rErr } = await client
-        .from('realization')
-        .upsert(realizationRows, { onConflict: 'id' });
-      if (rErr) throw wrapTableError('realization', rErr);
+      await upsertInChunks('realization', realizationRows, 'id');
     }
 
     onProgress?.('Sinkronisasi Supabase selesai!');
     return {
       success: true,
+      diagnosticType: 'ok',
       modeUsed: options?.mode || 'append',
       counts: {
         costCenters: selectedTables.costCenters ? costCenterRows.length : 0,
@@ -827,23 +948,55 @@ export async function pushDatabaseToSupabase(
   } catch (err: any) {
     console.error('Failed to push to Supabase:', err);
     const rawMsg = err?.message || 'Terjadi kesalahan saat mengunggah data ke Supabase.';
-    const isRls = rawMsg.toLowerCase().includes('violates row-level security policy') ||
-                  rawMsg.toLowerCase().includes('row-level security');
+    const lower = rawMsg.toLowerCase();
+    const isRls = lower.includes('violates row-level security policy') || lower.includes('row-level security');
+    const isNetwork = isNetworkFetchError(rawMsg);
+    const isAuth = lower.includes('invalid api key') || lower.includes('jwt') || lower.includes('unauthorized');
     return {
       success: false,
       error: rawMsg,
-      isRlsError: isRls
+      isRlsError: isRls,
+      isNetworkError: isNetwork,
+      diagnosticType: isRls
+        ? 'rls_blocked'
+        : isNetwork
+        ? 'network_or_paused'
+        : isAuth
+        ? 'auth_invalid'
+        : 'unknown'
     };
   }
 }
 
-export async function testSupabaseConnection(config: SupabaseConfig): Promise<{ success: boolean; latencyMs?: number; message?: string }> {
+export interface ConnectionTestResult {
+  success: boolean;
+  latencyMs?: number;
+  message?: string;
+  normalizedUrl?: string;
+  diagnosticType?: 'ok' | 'schema_missing' | 'config_invalid' | 'network_or_paused' | 'auth_invalid' | 'rls_blocked' | 'unknown';
+}
+
+export async function testSupabaseConnection(config: SupabaseConfig): Promise<ConnectionTestResult> {
   const startTime = performance.now();
+  const normalizedUrl = normalizeSupabaseUrl(config.projectUrl);
+  const configIssue = diagnoseSupabaseConfigIssue(config);
   const client = getSupabaseClient(config);
-  if (!client) {
+
+  if (!client || configIssue) {
     return {
       success: false,
-      message: 'Project URL atau Public Anon Key belum valid. Pastikan format URL https://[ref].supabase.co.'
+      normalizedUrl,
+      diagnosticType: 'config_invalid',
+      message: configIssue || 'Project URL atau Public Anon Key belum valid. Pastikan format URL https://[ref].supabase.co.'
+    };
+  }
+
+  if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+    return {
+      success: false,
+      normalizedUrl,
+      diagnosticType: 'network_or_paused',
+      message: 'Browser sedang offline. Periksa koneksi internet Anda lalu coba uji koneksi kembali.'
     };
   }
 
@@ -852,30 +1005,78 @@ export async function testSupabaseConnection(config: SupabaseConfig): Promise<{ 
     const latencyMs = Math.round(performance.now() - startTime);
 
     if (error) {
-      // If table doesn't exist yet, but connection was authenticated
-      if (error.code === '42P01') {
+      const errMsg = error.message || '';
+      const lower = errMsg.toLowerCase();
+
+      // Table doesn't exist yet, but server & API key are reachable and valid
+      if (error.code === '42P01' || lower.includes('does not exist') || lower.includes('could not find the table')) {
         return {
           success: true,
           latencyMs,
+          normalizedUrl,
+          diagnosticType: 'schema_missing',
           message: 'Terhubung ke Supabase! Catatan: Tabel database belum dibuat. Silakan jalankan DABACO SQL Schema terlebih dahulu di SQL Editor Supabase.'
         };
       }
+
+      // Network failure / Paused project / Firewall / DNS error (Supabase JS wraps Failed to fetch inside error.message)
+      if (isNetworkFetchError(errMsg)) {
+        return {
+          success: false,
+          latencyMs,
+          normalizedUrl,
+          diagnosticType: 'network_or_paused',
+          message: `Server Supabase (${normalizedUrl}) tidak dapat dijangkau (Failed to fetch). Proyek Supabase kemungkinan sedang Paused (dijeda), Project URL salah ketik, atau jaringan/firewall memblokir *.supabase.co.`
+        };
+      }
+
+      // Invalid API Key / JWT
+      if (lower.includes('invalid api key') || lower.includes('jwt') || error.code === 'PGRST301') {
+        return {
+          success: false,
+          latencyMs,
+          normalizedUrl,
+          diagnosticType: 'auth_invalid',
+          message: `Public Anon Key ditolak oleh Supabase (${errMsg}). Salin ulang anon/public key dari Project Settings → API.`
+        };
+      }
+
+      if (lower.includes('row-level security') || error.code === '42501') {
+        return {
+          success: false,
+          latencyMs,
+          normalizedUrl,
+          diagnosticType: 'rls_blocked',
+          message: `Akses tabel diblokir oleh Row-Level Security (RLS): ${errMsg}. Jalankan skrip perbaikan RLS di tab DABACO SQL Schema.`
+        };
+      }
+
       return {
         success: false,
         latencyMs,
-        message: `Koneksi ditolak: ${error.message} (Code: ${error.code || 'UNKNOWN'})`
+        normalizedUrl,
+        diagnosticType: 'unknown',
+        message: `Koneksi ditolak: ${errMsg} (Code: ${error.code || 'UNKNOWN'})`
       };
     }
 
     return {
       success: true,
       latencyMs,
-      message: `Koneksi Supabase Sukses! Latensi ${latencyMs}ms. RLS dan otorisasi API terverifikasi aktif.`
+      normalizedUrl,
+      diagnosticType: 'ok',
+      message: `Koneksi Supabase Sukses! Latensi ${latencyMs}ms. Endpoint ${normalizedUrl} & otorisasi API terverifikasi aktif.`
     };
   } catch (err: any) {
+    const errMsg = err?.message || 'Gagal menghubungi server Supabase.';
+    const isNet = isNetworkFetchError(errMsg);
     return {
       success: false,
-      message: err?.message || 'Gagal menghubungi server Supabase.'
+      normalizedUrl,
+      diagnosticType: isNet ? 'network_or_paused' : 'unknown',
+      message: isNet
+        ? `Server Supabase (${normalizedUrl}) tidak dapat dijangkau (Failed to fetch). Proyek Supabase kemungkinan sedang Paused (dijeda), Project URL salah, atau jaringan memblokir *.supabase.co.`
+        : errMsg
     };
   }
 }

@@ -51,7 +51,9 @@ import {
 import {
   fetchDatabaseFromSupabase,
   pushDatabaseToSupabase,
-  isConfigValid
+  isConfigValid,
+  normalizeSupabaseConfig,
+  diagnoseSupabaseConfigIssue
 } from './services/supabaseService';
 
 import {
@@ -249,44 +251,59 @@ export default function App() {
 
   // Supabase Database Connection & Synchronization State
   const [supabaseConfig, setSupabaseConfig] = useState<SupabaseConfig>(() => {
+    const manualOverride = localStorage.getItem('dabaco_supabase_manual_override') === '1';
+
+    // Helper to load saved localStorage config (normalized)
+    const loadSavedLocal = (): SupabaseConfig | null => {
+      const saved = localStorage.getItem('dabaco_supabase_config');
+      if (!saved) return null;
+      try {
+        const parsed = normalizeSupabaseConfig(JSON.parse(saved));
+        if (parsed.projectUrl?.includes('dabaco-ajinomoto-prod') || !isConfigValid(parsed)) {
+          localStorage.removeItem('dabaco_supabase_config');
+          return null;
+        }
+        return parsed;
+      } catch (e) {
+        console.error('Failed to parse dabaco_supabase_config', e);
+        return null;
+      }
+    };
+
+    // If user manually saved custom credentials in this browser, honor them first
+    if (manualOverride) {
+      const localCfg = loadSavedLocal();
+      if (localCfg) return localCfg;
+    }
+
     // 1. Prioritize environment variables (Vercel / Production Deployment)
     const envUrl = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) ? String(import.meta.env.VITE_SUPABASE_URL).trim() : '';
     const envKey = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) ? String(import.meta.env.VITE_SUPABASE_ANON_KEY).trim() : '';
 
     if (envUrl && envKey) {
-      const candidate: SupabaseConfig = {
+      const candidate = normalizeSupabaseConfig({
         projectUrl: envUrl,
         anonKey: envKey,
         status: 'connected',
         tablesSynced: 0,
         lastBackupTime: null,
         encryptionActive: true
-      };
+      });
       if (isConfigValid(candidate)) {
         return candidate;
       }
     }
 
-    // 2. Check saved manual configuration in localStorage
-    const saved = localStorage.getItem('dabaco_supabase_config');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed.projectUrl?.includes('dabaco-ajinomoto-prod') || !isConfigValid(parsed)) {
-          localStorage.removeItem('dabaco_supabase_config');
-          return INITIAL_SUPABASE_CONFIG;
-        }
-        return parsed;
-      } catch (e) {
-        console.error('Failed to parse dabaco_supabase_config', e);
-      }
-    }
-    return INITIAL_SUPABASE_CONFIG;
+    // 2. Fallback to saved manual configuration in localStorage
+    const localCfg = loadSavedLocal();
+    if (localCfg) return localCfg;
+
+    return normalizeSupabaseConfig(INITIAL_SUPABASE_CONFIG);
   });
 
   useEffect(() => {
     if (isConfigValid(supabaseConfig)) {
-      localStorage.setItem('dabaco_supabase_config', JSON.stringify(supabaseConfig));
+      localStorage.setItem('dabaco_supabase_config', JSON.stringify(normalizeSupabaseConfig(supabaseConfig)));
     }
   }, [supabaseConfig]);
 
@@ -294,7 +311,13 @@ export default function App() {
   const [isDbLoading, setIsDbLoading] = useState<boolean>(false);
   const [isPushingToSupabase, setIsPushingToSupabase] = useState<boolean>(false);
   const [pushProgressMessage, setPushProgressMessage] = useState<string>('');
-  const [dbSyncStatus, setDbSyncStatus] = useState<'connected' | 'empty' | 'unconfigured' | 'error'>('connected');
+  const [lastSupabaseError, setLastSupabaseError] = useState<{
+    message: string;
+    diagnosticType?: 'ok' | 'schema_missing' | 'config_invalid' | 'network_or_paused' | 'auth_invalid' | 'rls_blocked' | 'unknown';
+  } | null>(null);
+  const [dbSyncStatus, setDbSyncStatus] = useState<'connected' | 'empty' | 'unconfigured' | 'error'>(() =>
+    isConfigValid(supabaseConfig) ? 'connected' : 'unconfigured'
+  );
   const [dbLastSyncTime, setDbLastSyncTime] = useState<string | null>(() => {
     const saved = localStorage.getItem('dabaco_db_last_saved');
     if (saved) {
@@ -364,14 +387,21 @@ export default function App() {
 
   // Push full dataset to Supabase
   const handlePushDataToSupabase = async (customConfig?: Partial<SupabaseConfig>) => {
-    const activeCfg: SupabaseConfig = { ...supabaseConfig, ...customConfig };
-    if (!isConfigValid(activeCfg)) {
-      showToast('Kredensial Supabase belum lengkap. Silakan isi Project URL & Anon Key di menu Supabase Backend.', 'warning');
+    const activeCfg = normalizeSupabaseConfig({ ...supabaseConfig, ...customConfig });
+    const cfgIssue = diagnoseSupabaseConfigIssue(activeCfg);
+    if (cfgIssue || !isConfigValid(activeCfg)) {
+      setDbSyncStatus('unconfigured');
+      setLastSupabaseError({
+        message: cfgIssue || 'Kredensial Supabase belum lengkap. Silakan isi Project URL & Anon Key di menu Supabase Backend.',
+        diagnosticType: 'config_invalid'
+      });
+      showToast(cfgIssue || 'Kredensial Supabase belum lengkap. Silakan isi Project URL & Anon Key di menu Supabase Backend.', 'warning');
       setActiveTab('supabase');
       return;
     }
 
     setIsPushingToSupabase(true);
+    setLastSupabaseError(null);
     setPushProgressMessage('Menghubungi server Supabase...');
     try {
       const res = await pushDatabaseToSupabase(
@@ -390,18 +420,26 @@ export default function App() {
         const nowTime = new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setDbSyncStatus('connected');
         setDbLastSyncTime(nowTime);
-        setSupabaseConfig(prev => ({
-          ...prev,
-          ...customConfig,
-          status: 'connected',
-          lastBackupTime: new Date().toISOString()
-        }));
+        setLastSupabaseError(null);
+        setSupabaseConfig(prev =>
+          normalizeSupabaseConfig({
+            ...prev,
+            ...customConfig,
+            status: 'connected',
+            lastBackupTime: new Date().toISOString()
+          })
+        );
         showToast(
           `Sukses push ke Supabase! (${res.counts.budget} Budget, ${res.counts.forecast} Forecast, ${res.counts.realization} Realisasi kas berhasil diunggah)`,
           'success'
         );
       } else {
         const errorMsg = res.error || 'Gagal mengunggah data ke Supabase.';
+        setDbSyncStatus('error');
+        setLastSupabaseError({
+          message: errorMsg,
+          diagnosticType: res.diagnosticType || 'unknown'
+        });
         showToast(errorMsg, 'error');
         if (res.isRlsError || errorMsg.toLowerCase().includes('row-level security')) {
           setRlsErrorMessage(errorMsg);
@@ -411,6 +449,11 @@ export default function App() {
     } catch (err: any) {
       console.error('Error during push to Supabase:', err);
       const errMsg = err?.message || 'Terjadi kesalahan saat push data ke database.';
+      setDbSyncStatus('error');
+      setLastSupabaseError({
+        message: errMsg,
+        diagnosticType: errMsg.toLowerCase().includes('failed to fetch') ? 'network_or_paused' : 'unknown'
+      });
       showToast(errMsg, 'error');
       if (errMsg.toLowerCase().includes('row-level security')) {
         setRlsErrorMessage(errMsg);
@@ -1246,9 +1289,17 @@ export default function App() {
               {activeTab === 'supabase' && (
                 <SupabaseView
                   config={supabaseConfig}
-                  onUpdateConfig={(c) => {
-                    setSupabaseConfig(prev => ({ ...prev, ...c }));
-                    showToast('Konfigurasi Supabase disimpan!');
+                  onUpdateConfig={(c, silent) => {
+                    const updated = normalizeSupabaseConfig({ ...supabaseConfig, ...c });
+                    setSupabaseConfig(updated);
+                    if (c.projectUrl !== undefined || c.anonKey !== undefined) {
+                      if (isConfigValid(updated)) {
+                        localStorage.setItem('dabaco_supabase_manual_override', '1');
+                      }
+                    }
+                    if (!silent) {
+                      showToast('Konfigurasi Supabase disimpan!');
+                    }
                   }}
                   darkMode={darkMode}
                   dataCounts={{
@@ -1261,10 +1312,12 @@ export default function App() {
                   onPushData={handlePushDataToSupabase}
                   isPushing={isPushingToSupabase}
                   pushProgress={pushProgressMessage}
-                  onReloadData={(c) => handleLoadFromSupabase({ ...supabaseConfig, ...c }, false)}
+                  onReloadData={(c) => handleLoadFromSupabase(normalizeSupabaseConfig({ ...supabaseConfig, ...c }), false)}
                   isLoadingData={isDbLoading}
                   onOpenDatabaseConsole={() => setShowDatabaseConsoleModal(true)}
                   dbSyncStatus={dbSyncStatus}
+                  onSyncStatusChange={setDbSyncStatus}
+                  lastPushError={lastSupabaseError}
                   lastSyncTime={dbLastSyncTime}
                 />
               )}
