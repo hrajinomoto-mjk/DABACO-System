@@ -23,6 +23,13 @@ import { KeyboardShortcutsModal } from './components/KeyboardShortcutsModal';
 import { AltKeyGuideHUD } from './components/AltKeyGuideHUD';
 import { RlsFixModal } from './components/RlsFixModal';
 import { DatabaseConsoleModal } from './components/DatabaseConsoleModal';
+import {
+  ThemeId,
+  DEFAULT_DARK_THEME,
+  DEFAULT_LIGHT_THEME,
+  getThemeById,
+  isValidThemeId
+} from './utils/themes';
 
 import {
   INITIAL_BUDGET,
@@ -125,9 +132,46 @@ export default function App() {
     });
   };
 
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('dabaco_dark_mode') !== 'false';
+  const [activeTheme, setActiveTheme] = useState<ThemeId>(() => {
+    const savedTheme = localStorage.getItem('dabaco_theme');
+    if (isValidThemeId(savedTheme)) {
+      return savedTheme;
+    }
+    return localStorage.getItem('dabaco_dark_mode') !== 'false'
+      ? DEFAULT_DARK_THEME
+      : DEFAULT_LIGHT_THEME;
   });
+
+  const darkMode = getThemeById(activeTheme).mode === 'dark';
+
+  const handleSelectTheme = (themeId: ThemeId, silent = false) => {
+    const selected = getThemeById(themeId);
+    setActiveTheme(selected.id);
+    localStorage.setItem('dabaco_theme', selected.id);
+    if (selected.mode === 'dark') {
+      localStorage.setItem('dabaco_last_dark_theme', selected.id);
+    } else {
+      localStorage.setItem('dabaco_last_light_theme', selected.id);
+    }
+    if (!silent) {
+      showToast(`Tema "${selected.name}" diterapkan (${selected.tagline})`);
+    }
+  };
+
+  const setDarkMode = (valOrUpdater: boolean | ((prev: boolean) => boolean)) => {
+    setActiveTheme(prevTheme => {
+      const prevDark = getThemeById(prevTheme).mode === 'dark';
+      const nextDark = typeof valOrUpdater === 'function' ? valOrUpdater(prevDark) : valOrUpdater;
+      if (nextDark === prevDark) return prevTheme;
+      const savedTarget = localStorage.getItem(nextDark ? 'dabaco_last_dark_theme' : 'dabaco_last_light_theme');
+      const fallback = nextDark ? DEFAULT_DARK_THEME : DEFAULT_LIGHT_THEME;
+      const nextTheme = isValidThemeId(savedTarget) && getThemeById(savedTarget).mode === (nextDark ? 'dark' : 'light')
+        ? savedTarget
+        : fallback;
+      localStorage.setItem('dabaco_theme', nextTheme);
+      return nextTheme;
+    });
+  };
 
   // Core Datasets (Persisted in local database storage and auto-loaded immediately on system launch)
   const [budget, setBudget] = useState<BudgetRecord[]>(() =>
@@ -465,15 +509,17 @@ export default function App() {
     return calculateCategoriesAndItems(budget, forecast, realization, masterItems);
   }, [budget, forecast, realization, masterItems]);
 
-  // Sync Dark Mode with html class and local storage
+  // Sync Active Theme & Dark Mode with html attributes/classes and local storage
   useEffect(() => {
+    localStorage.setItem('dabaco_theme', activeTheme);
     localStorage.setItem('dabaco_dark_mode', String(darkMode));
+    document.documentElement.setAttribute('data-theme', activeTheme);
     if (darkMode) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
-  }, [darkMode]);
+  }, [activeTheme, darkMode]);
 
   const showToast = (message: string, type: 'success' | 'warning' | 'error' = 'success') => {
     setToast({ message, type });
@@ -922,7 +968,7 @@ export default function App() {
   }, [currentPage, budget, forecast, realization]);
 
   return (
-    <div className={`min-h-screen transition-colors duration-200 ${
+    <div className={`min-h-screen transition-colors duration-200 dabaco-app-shell ${
       darkMode ? 'bg-[#080c14] text-slate-100' : 'bg-[#f8fafc] text-slate-900'
     }`}>
       {/* Global Toast Notification */}
@@ -990,7 +1036,7 @@ export default function App() {
           />
 
           {/* Main Content Area */}
-          <div className={`flex-1 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} flex flex-col min-w-0 transition-all duration-300 ease-in-out`}>
+          <div className={`flex-1 ${isSidebarCollapsed ? 'lg:ml-20' : 'lg:ml-72'} pt-[68px] flex flex-col min-w-0 transition-all duration-300 ease-in-out`}>
             <Navbar
               activeTab={activeTab}
               onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
@@ -1001,6 +1047,9 @@ export default function App() {
               onOpenBulkUpload={() => setShowBulkUploadModal(true)}
               darkMode={darkMode}
               setDarkMode={setDarkMode}
+              activeTheme={activeTheme}
+              onSelectTheme={handleSelectTheme}
+              isSidebarCollapsed={isSidebarCollapsed}
               onLogout={handleRequestLogout}
               isAltPressed={isAltPressed}
               onOpenShortcutsHelp={() => setShowShortcutsModal(true)}
@@ -1178,6 +1227,8 @@ export default function App() {
                 <SettingsView
                   darkMode={darkMode}
                   setDarkMode={setDarkMode}
+                  activeTheme={activeTheme}
+                  onSelectTheme={handleSelectTheme}
                   costCenters={costCenters}
                   onAddCostCenter={handleAddCostCenter}
                   onEditCostCenter={handleEditCostCenter}

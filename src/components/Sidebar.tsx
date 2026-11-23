@@ -96,7 +96,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Main Sidebar Container */}
       <aside
-        className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col transition-all duration-300 ease-in-out lg:translate-x-0 select-none ${
+        className={`fixed top-0 left-0 bottom-0 z-50 flex flex-col transition-all duration-300 ease-in-out lg:translate-x-0 select-none dabaco-sidebar ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         } ${
           isCollapsed ? 'w-72 lg:w-20' : 'w-72'
@@ -106,15 +106,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
             : 'bg-white border-r border-slate-200/90 text-slate-800 shadow-xl shadow-slate-200/50'
         }`}
       >
-        {/* Subtle Top Ajinomoto Red Accent Line */}
-        <div className="h-1 w-full bg-gradient-to-r from-red-600 via-rose-500 to-red-700" />
+        {/* Subtle Top Theme Accent Line */}
+        <div className="h-1 w-full dabaco-top-accent shrink-0" />
 
         {/* Brand Header */}
         <div
-          className={`border-b border-slate-200/70 dark:border-slate-800/80 transition-all ${
+          className={`border-b border-slate-200/70 dark:border-slate-800/80 transition-all shrink-0 ${
             isCollapsed
               ? 'p-3 flex flex-col items-center gap-2.5'
-              : 'px-3.5 py-3 flex items-center justify-between gap-1.5'
+              : 'h-16 px-3.5 flex items-center justify-between gap-1.5'
           }`}
         >
           {!isCollapsed ? (
@@ -126,10 +126,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1.5 leading-none mb-1">
-                    <span className="font-black tracking-tight text-base bg-gradient-to-r from-red-600 via-rose-600 to-red-700 bg-clip-text text-transparent">
+                    <span className="font-black tracking-tight text-base dabaco-brand-text">
                       DABACO
                     </span>
-                    <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md bg-red-600/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                    <span className="text-[10px] font-black px-1.5 py-0.2 rounded-md border dabaco-badge-accent">
                       v2.4
                     </span>
                   </div>
@@ -219,7 +219,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           }`}
         >
           <div className="relative group cursor-pointer">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-br from-red-600 via-rose-600 to-red-700 text-white font-black text-xs flex items-center justify-center shadow-md shadow-red-600/25 ring-2 ring-white dark:ring-slate-800">
+            <div className="w-9 h-9 rounded-2xl dabaco-avatar-accent text-white font-black text-xs flex items-center justify-center ring-2 ring-white dark:ring-slate-800">
               HR
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900 shadow-[0_0_8px_#10b981]" />
@@ -287,7 +287,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       : 'flex items-center justify-between px-3.5 py-2.5'
                   } ${
                     isActive
-                      ? 'bg-gradient-to-r from-red-600 via-[#D10010] to-[#B3000E] text-white shadow-lg shadow-red-600/25 ring-1 ring-red-500/40'
+                      ? 'dabaco-nav-active text-white border'
                       : darkMode
                       ? 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
                       : 'text-slate-600 hover:text-slate-950 hover:bg-slate-100/80'

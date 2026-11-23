@@ -4,7 +4,6 @@ import {
   Bell,
   RefreshCw,
   Calendar,
-  Upload,
   Sun,
   Moon,
   LogOut,
@@ -13,11 +12,13 @@ import {
   UploadCloud,
   Database,
   ShieldCheck,
-  CheckCircle2
+  CheckCircle2,
+  Palette,
+  Check
 } from 'lucide-react';
 import { ActiveTab } from './Sidebar';
 import { AlertNotification } from '../types';
-import { AjinomotoLogo } from './AjinomotoLogo';
+import { SYSTEM_THEMES, ThemeId, getThemeById } from '../utils/themes';
 
 interface NavbarProps {
   activeTab: ActiveTab;
@@ -29,6 +30,9 @@ interface NavbarProps {
   onOpenBulkUpload?: () => void;
   darkMode: boolean;
   setDarkMode?: (dark: boolean) => void;
+  activeTheme?: ThemeId;
+  onSelectTheme?: (theme: ThemeId) => void;
+  isSidebarCollapsed?: boolean;
   onLogout?: () => void;
   isAltPressed?: boolean;
   onOpenShortcutsHelp?: () => void;
@@ -51,9 +55,11 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSyncing,
   alerts,
   onOpenAlerts,
-  onOpenBulkUpload,
   darkMode,
   setDarkMode,
+  activeTheme = (darkMode ? 'midnight-dark' : 'crimson-light') as ThemeId,
+  onSelectTheme,
+  isSidebarCollapsed = false,
   onLogout,
   isAltPressed = false,
   onOpenShortcutsHelp,
@@ -65,7 +71,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [timeString, setTimeString] = useState('');
   const [dateString, setDateString] = useState('');
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const themeDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const updateTime = () => {
@@ -78,11 +86,14 @@ export const Navbar: React.FC<NavbarProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Close dropdown on outside click
+  // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setUserDropdownOpen(false);
+      }
+      if (themeDropdownRef.current && !themeDropdownRef.current.contains(event.target as Node)) {
+        setThemeDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -174,15 +185,25 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   const meta = getTabMeta(activeTab);
   const unreadAlerts = alerts.filter(a => a.severity === 'danger' || a.severity === 'warning');
+  const currentThemeObj = getThemeById(activeTheme);
+  const lightThemes = SYSTEM_THEMES.filter(t => t.mode === 'light');
+  const darkThemes = SYSTEM_THEMES.filter(t => t.mode === 'dark');
 
   return (
-    <header className={`sticky top-0 z-30 px-4 sm:px-6 lg:px-8 py-3 border-b backdrop-blur-md transition-colors duration-200 ${
-      darkMode
-        ? 'bg-[#090d16]/90 border-slate-800/80 text-white'
-        : 'bg-white/90 border-slate-200 text-slate-900 shadow-xs'
-    }`}>
-      <div className="flex items-center justify-between gap-3 md:gap-4">
-        
+    <header
+      className={`fixed top-0 right-0 left-0 ${
+        isSidebarCollapsed ? 'lg:left-20' : 'lg:left-72'
+      } z-30 border-b backdrop-blur-md transition-all duration-300 ease-in-out dabaco-navbar ${
+        darkMode
+          ? 'bg-[#090d16]/95 border-slate-800/80 text-white'
+          : 'bg-white/95 border-slate-200 text-slate-900 shadow-xs'
+      }`}
+    >
+      {/* Seamless Top Accent Line matching Sidebar */}
+      <div className="h-1 w-full dabaco-top-accent" />
+
+      <div className="h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between gap-3 md:gap-4">
+
         {/* ========================================================= */}
         {/* LEFT ZONE: Mobile Menu + Single-Line Clean Title & Badge  */}
         {/* ========================================================= */}
@@ -209,8 +230,8 @@ export const Navbar: React.FC<NavbarProps> = ({
             </h1>
 
             <div className="hidden lg:flex items-center gap-1.5 shrink-0">
-              <span className="inline-flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-md bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 whitespace-nowrap">
-                <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+              <span className="inline-flex items-center gap-1.5 font-bold uppercase text-[10px] tracking-wider px-2 py-0.5 rounded-md border whitespace-nowrap dabaco-badge-accent">
+                <span className="w-1.5 h-1.5 rounded-full animate-pulse dabaco-dot-accent" />
                 Mojokerto Factory
               </span>
               <span className="hidden 2xl:inline text-slate-300 dark:text-slate-700 font-normal">|</span>
@@ -227,10 +248,10 @@ export const Navbar: React.FC<NavbarProps> = ({
         {/* RIGHT ZONE: Structured Action Groups, Utilities & Profile */}
         {/* ========================================================= */}
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          
+
           {/* GROUP 1: Cloud & Data Sync Operations */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            
+
             {/* Live Sync Status & Trigger Pill */}
             <button
               onClick={onQuickSync}
@@ -300,13 +321,13 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Divider */}
           <div className="h-5 w-px bg-slate-200 dark:bg-slate-800 hidden sm:block" />
 
-          {/* GROUP 2: Utility Cluster (Shortcuts, Theme Toggle, Notifications) */}
+          {/* GROUP 2: Utility Cluster (Shortcuts, Multi-Theme Picker, Quick Mode Toggle, Notifications) */}
           <div className={`inline-flex items-center p-0.5 rounded-xl border ${
             darkMode
               ? 'bg-slate-800/60 border-slate-700/70'
               : 'bg-slate-100/80 border-slate-200/90 shadow-2xs'
           }`}>
-            
+
             {/* Keyboard Shortcuts Cheatsheet Button */}
             {onOpenShortcutsHelp && (
               <button
@@ -327,7 +348,187 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Dark / Light Mode Switcher */}
+            {/* Professional Multi-Theme Picker Popover */}
+            {onSelectTheme && (
+              <div className="relative" ref={themeDropdownRef}>
+                <button
+                  onClick={() => {
+                    setThemeDropdownOpen(prev => !prev);
+                    setUserDropdownOpen(false);
+                  }}
+                  className={`p-1.5 sm:p-2 rounded-lg transition-all cursor-pointer relative flex items-center gap-1 ${
+                    themeDropdownOpen
+                      ? darkMode
+                        ? 'bg-slate-700 text-white'
+                        : 'bg-white text-slate-900 shadow-2xs'
+                      : darkMode
+                      ? 'hover:bg-slate-700/70 text-slate-300 hover:text-white'
+                      : 'hover:bg-white text-slate-700 hover:shadow-2xs'
+                  }`}
+                  title={`Tema Aktif: ${currentThemeObj.name} — Klik untuk ganti tema`}
+                  aria-label="Pilih Tema Tampilan"
+                >
+                  <Palette className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span
+                    className="w-2 h-2 rounded-full ring-1 ring-black/15 dark:ring-white/30 shrink-0"
+                    style={{ backgroundColor: currentThemeObj.swatches.accent }}
+                  />
+                </button>
+
+                {themeDropdownOpen && (
+                  <div
+                    className={`absolute right-0 mt-2.5 w-80 sm:w-[340px] rounded-2xl border shadow-2xl p-3 z-50 transition-all animate-in fade-in zoom-in-95 duration-150 ${
+                      darkMode
+                        ? 'bg-[#0f1422] border-slate-700/90 text-white shadow-black/70'
+                        : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-slate-200/80 dark:border-slate-800">
+                      <div>
+                        <p className="text-xs font-extrabold tracking-tight flex items-center gap-1.5">
+                          <Palette className="w-3.5 h-3.5" style={{ color: currentThemeObj.swatches.accent }} />
+                          <span>Tema Tampilan Sistem</span>
+                        </p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                          Aktif: <span className="font-bold">{currentThemeObj.name}</span>
+                        </p>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md dabaco-badge-accent border">
+                        {SYSTEM_THEMES.length} Konsep
+                      </span>
+                    </div>
+
+                    {/* Light Themes Group */}
+                    <div className="mb-2.5">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1 mb-1.5 flex items-center gap-1">
+                        <Sun className="w-3 h-3 text-amber-500" />
+                        Mode Terang (Light)
+                      </p>
+                      <div className="space-y-1">
+                        {lightThemes.map(theme => {
+                          const isSelected = activeTheme === theme.id;
+                          return (
+                            <button
+                              key={theme.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectTheme(theme.id);
+                                setThemeDropdownOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl border text-left transition-all cursor-pointer ${
+                                isSelected
+                                  ? darkMode
+                                    ? 'bg-white/10 border-white/25'
+                                    : 'bg-slate-100/90 border-slate-300 shadow-2xs'
+                                  : darkMode
+                                  ? 'border-transparent hover:bg-white/5'
+                                  : 'border-transparent hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {/* Swatch preview */}
+                                <div
+                                  className="w-9 h-7 rounded-lg border overflow-hidden flex shrink-0 shadow-2xs"
+                                  style={{ backgroundColor: theme.swatches.bg, borderColor: theme.swatches.border }}
+                                >
+                                  <div className="w-2.5 h-full" style={{ backgroundColor: theme.swatches.sidebar, borderRight: `1px solid ${theme.swatches.border}` }} />
+                                  <div className="flex-1 flex flex-col">
+                                    <div className="h-1.5 w-full" style={{ backgroundColor: theme.swatches.accent }} />
+                                    <div className="flex-1 p-1 flex items-center gap-0.5">
+                                      <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: theme.swatches.accent }} />
+                                      <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: theme.swatches.accentSecondary }} />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold leading-tight truncate">{theme.name}</p>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                    {theme.tagline} &bull; {theme.recommendedFor}
+                                  </p>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <span
+                                  className="w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0"
+                                  style={{ backgroundColor: theme.swatches.accent }}
+                                >
+                                  <Check className="w-3 h-3" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Dark Themes Group */}
+                    <div>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 px-1 mb-1.5 flex items-center gap-1">
+                        <Moon className="w-3 h-3 text-indigo-400" />
+                        Mode Gelap (Dark)
+                      </p>
+                      <div className="space-y-1">
+                        {darkThemes.map(theme => {
+                          const isSelected = activeTheme === theme.id;
+                          return (
+                            <button
+                              key={theme.id}
+                              type="button"
+                              onClick={() => {
+                                onSelectTheme(theme.id);
+                                setThemeDropdownOpen(false);
+                              }}
+                              className={`w-full flex items-center justify-between gap-2.5 px-2.5 py-2 rounded-xl border text-left transition-all cursor-pointer ${
+                                isSelected
+                                  ? darkMode
+                                    ? 'bg-white/10 border-white/25'
+                                    : 'bg-slate-100/90 border-slate-300 shadow-2xs'
+                                  : darkMode
+                                  ? 'border-transparent hover:bg-white/5'
+                                  : 'border-transparent hover:bg-slate-50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                {/* Swatch preview */}
+                                <div
+                                  className="w-9 h-7 rounded-lg border overflow-hidden flex shrink-0 shadow-2xs"
+                                  style={{ backgroundColor: theme.swatches.bg, borderColor: theme.swatches.border }}
+                                >
+                                  <div className="w-2.5 h-full" style={{ backgroundColor: theme.swatches.sidebar, borderRight: `1px solid ${theme.swatches.border}` }} />
+                                  <div className="flex-1 flex flex-col">
+                                    <div className="h-1.5 w-full" style={{ backgroundColor: theme.swatches.accent }} />
+                                    <div className="flex-1 p-1 flex items-center gap-0.5">
+                                      <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: theme.swatches.accent }} />
+                                      <span className="w-2 h-2 rounded-xs" style={{ backgroundColor: theme.swatches.accentSecondary }} />
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="text-xs font-bold leading-tight truncate">{theme.name}</p>
+                                  <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+                                    {theme.tagline} &bull; {theme.recommendedFor}
+                                  </p>
+                                </div>
+                              </div>
+                              {isSelected && (
+                                <span
+                                  className="w-5 h-5 rounded-full flex items-center justify-center text-white shrink-0"
+                                  style={{ backgroundColor: theme.swatches.accent }}
+                                >
+                                  <Check className="w-3 h-3" />
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Quick Dark / Light Mode Switcher */}
             {setDarkMode && (
               <button
                 onClick={() => setDarkMode(!darkMode)}
@@ -336,7 +537,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                     ? 'hover:bg-slate-700/70 text-amber-400'
                     : 'hover:bg-white text-slate-700 hover:shadow-2xs'
                 }`}
-                title={darkMode ? 'Beralih ke Tampilan Terang (Ctrl+D)' : 'Beralih ke Tampilan Gelap (Ctrl+D)'}
+                title={darkMode ? 'Beralih ke Mode Terang (Ctrl+D)' : 'Beralih ke Mode Gelap (Ctrl+D)'}
               >
                 {darkMode ? <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4" /> : <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
                 {isAltPressed && (
@@ -388,7 +589,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* GROUP 4: User Profile & Dropdown */}
           <div className="relative" ref={dropdownRef}>
             <button
-              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              onClick={() => {
+                setUserDropdownOpen(!userDropdownOpen);
+                setThemeDropdownOpen(false);
+              }}
               className={`flex items-center gap-2 p-1 sm:pl-2 rounded-xl transition-all cursor-pointer border ${
                 darkMode
                   ? 'border-transparent hover:border-slate-700 hover:bg-slate-800/80'
@@ -396,7 +600,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               }`}
             >
               <div className="relative">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-red-600 via-rose-600 to-red-700 text-white font-black text-xs flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-xl dabaco-avatar-accent text-white font-black text-xs flex items-center justify-center shadow-xs">
                   A
                 </div>
                 <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-[#090d16]" />
@@ -415,7 +619,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 darkMode ? 'bg-[#0f1422] border-slate-800 text-white shadow-black/60' : 'bg-white border-slate-200 text-slate-900 shadow-slate-300/40'
               }`}>
                 <div className="px-3 py-2 border-b border-slate-200 dark:border-slate-800">
-                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-red-600 dark:text-red-400 uppercase tracking-wider mb-1">
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider mb-1" style={{ color: currentThemeObj.swatches.accent }}>
                     <ShieldCheck className="w-3.5 h-3.5" />
                     PT Ajinomoto Indonesia
                   </div>
@@ -448,4 +652,3 @@ export const Navbar: React.FC<NavbarProps> = ({
     </header>
   );
 };
-

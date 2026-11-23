@@ -26,14 +26,18 @@ import {
   FileSpreadsheet,
   BarChart3,
   Database,
-  Save
+  Save,
+  Palette
 } from 'lucide-react';
 import { MasterCostCenter, MasterItem, BudgetRecord, ForecastRecord, RealizationRecord } from '../types';
 import { createEncryptedBackup } from '../utils/encryption';
+import { SYSTEM_THEMES, ThemeId, getThemeById } from '../utils/themes';
 
 interface SettingsViewProps {
   darkMode: boolean;
   setDarkMode: (dark: boolean) => void;
+  activeTheme?: ThemeId;
+  onSelectTheme?: (theme: ThemeId) => void;
   costCenters: MasterCostCenter[];
   onAddCostCenter?: (cc: MasterCostCenter) => void;
   onEditCostCenter?: (cc: MasterCostCenter) => void;
@@ -76,6 +80,8 @@ const DEFAULT_POLICY: BudgetPolicyConfig = {
 export const SettingsView: React.FC<SettingsViewProps> = ({
   darkMode,
   setDarkMode,
+  activeTheme = (darkMode ? 'midnight-dark' : 'crimson-light') as ThemeId,
+  onSelectTheme,
   costCenters,
   onAddCostCenter,
   onEditCostCenter,
@@ -87,6 +93,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   forecastData = [],
   realizationData = []
 }) => {
+  const currentTheme = getThemeById(activeTheme);
   // Credentials state
   const [username, setUsername] = useState('admin');
   const [newPassword, setNewPassword] = useState('');
@@ -304,16 +311,262 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           </div>
         </div>
 
-        <div className="flex items-center gap-3 self-start md:self-center">
+        <div className="flex items-center gap-2.5 self-start md:self-center">
+          <div className="hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/70 text-xs">
+            <span
+              className="w-2.5 h-2.5 rounded-full shrink-0"
+              style={{ backgroundColor: currentTheme.swatches.accent }}
+            />
+            <span className="font-bold text-slate-800 dark:text-slate-100">{currentTheme.name}</span>
+          </div>
           <button
             onClick={() => setDarkMode(!darkMode)}
             className="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 transition-colors cursor-pointer"
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
-            <span>{darkMode ? 'Light Mode' : 'Dark Mode'}</span>
+            <span>{darkMode ? 'Mode Terang' : 'Mode Gelap'}</span>
           </button>
         </div>
       </div>
+
+      {/* ========================================================= */}
+      {/* SECTION 0: TEMA & IDENTITAS VISUAL SISTEM                 */}
+      {/* ========================================================= */}
+      {onSelectTheme && (
+        <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-10 h-10 rounded-2xl text-white flex items-center justify-center shadow-md shrink-0 dabaco-avatar-accent"
+              >
+                <Palette className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-base sm:text-lg text-slate-900 dark:text-white">
+                  Tema & Identitas Visual Sistem
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Pilih konsep tampilan korporat sesuai kenyamanan kerja, sesi audit keuangan, maupun presentasi direksi.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 self-start sm:self-center">
+              <span className="px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 dabaco-badge-accent">
+                <span className="w-2 h-2 rounded-full dabaco-dot-accent" />
+                Aktif: {currentTheme.name}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+            {SYSTEM_THEMES.map((theme) => {
+              const isSelected = activeTheme === theme.id;
+              return (
+                <button
+                  key={theme.id}
+                  type="button"
+                  onClick={() => onSelectTheme(theme.id)}
+                  className={`group text-left rounded-2xl border p-3.5 transition-all duration-200 cursor-pointer flex flex-col gap-3 relative ${
+                    isSelected
+                      ? darkMode
+                        ? 'bg-slate-800/70 border-slate-500 ring-2 shadow-lg'
+                        : 'bg-slate-50/90 border-slate-400 ring-2 shadow-md'
+                      : darkMode
+                      ? 'bg-slate-950/40 border-slate-800 hover:border-slate-600 hover:bg-slate-800/40'
+                      : 'bg-slate-50/40 border-slate-200 hover:border-slate-300 hover:bg-white hover:shadow-xs'
+                  }`}
+                  style={
+                    isSelected
+                      ? {
+                          borderColor: theme.swatches.accent,
+                          boxShadow: `0 0 0 2px ${theme.swatches.accent}33`
+                        }
+                      : undefined
+                  }
+                >
+                  {/* Mini Dashboard Preview Canvas */}
+                  <div
+                    className="w-full h-24 rounded-xl border overflow-hidden flex flex-col shadow-2xs"
+                    style={{
+                      backgroundColor: theme.swatches.bg,
+                      borderColor: theme.swatches.border
+                    }}
+                  >
+                    {/* Mini Top Accent Strip */}
+                    <div
+                      className="h-1 w-full shrink-0"
+                      style={{
+                        backgroundImage: `linear-gradient(90deg, ${theme.swatches.accent}, ${theme.swatches.accentSecondary})`
+                      }}
+                    />
+
+                    {/* Mini Workspace Shell */}
+                    <div className="flex flex-1 min-h-0">
+                      {/* Mini Sidebar */}
+                      <div
+                        className="w-14 p-1.5 flex flex-col gap-1 border-r shrink-0"
+                        style={{
+                          backgroundColor: theme.swatches.sidebar,
+                          borderColor: theme.swatches.border
+                        }}
+                      >
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <span
+                            className="w-2.5 h-2.5 rounded-xs shrink-0"
+                            style={{ backgroundColor: theme.swatches.accent }}
+                          />
+                          <span
+                            className="h-1.5 flex-1 rounded-full opacity-75"
+                            style={{ backgroundColor: theme.swatches.text }}
+                          />
+                        </div>
+                        <div
+                          className="h-2.5 w-full rounded-sm"
+                          style={{
+                            backgroundImage: `linear-gradient(90deg, ${theme.swatches.accent}, ${theme.swatches.accentSecondary})`
+                          }}
+                        />
+                        <div
+                          className="h-2 w-4/5 rounded-sm opacity-25"
+                          style={{ backgroundColor: theme.swatches.muted }}
+                        />
+                        <div
+                          className="h-2 w-3/4 rounded-sm opacity-20"
+                          style={{ backgroundColor: theme.swatches.muted }}
+                        />
+                      </div>
+
+                      {/* Mini Main Area */}
+                      <div className="flex-1 flex flex-col min-w-0">
+                        {/* Mini Header */}
+                        <div
+                          className="h-4 px-2 flex items-center justify-between border-b shrink-0"
+                          style={{
+                            backgroundColor: theme.swatches.surface,
+                            borderColor: theme.swatches.border
+                          }}
+                        >
+                          <span
+                            className="h-1.5 w-12 rounded-full opacity-75"
+                            style={{ backgroundColor: theme.swatches.text }}
+                          />
+                          <div className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            <span
+                              className="w-2.5 h-2.5 rounded-xs"
+                              style={{ backgroundColor: theme.swatches.accent }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Mini Content Cards */}
+                        <div className="flex-1 p-2 grid grid-cols-3 gap-1.5 items-stretch">
+                          <div
+                            className="col-span-2 rounded-md border p-1.5 flex flex-col justify-between"
+                            style={{
+                              backgroundColor: theme.swatches.surface,
+                              borderColor: theme.swatches.border
+                            }}
+                          >
+                            <span
+                              className="h-1.5 w-10 rounded-full opacity-50"
+                              style={{ backgroundColor: theme.swatches.muted }}
+                            />
+                            <div className="flex items-end gap-1 h-5">
+                              <span
+                                className="w-2 h-3 rounded-t-xs opacity-60"
+                                style={{ backgroundColor: theme.swatches.accentSecondary }}
+                              />
+                              <span
+                                className="w-2 h-5 rounded-t-xs"
+                                style={{ backgroundColor: theme.swatches.accent }}
+                              />
+                              <span
+                                className="w-2 h-4 rounded-t-xs opacity-80"
+                                style={{ backgroundColor: theme.swatches.accentSecondary }}
+                              />
+                              <span
+                                className="w-2 h-3.5 rounded-t-xs opacity-45"
+                                style={{ backgroundColor: theme.swatches.muted }}
+                              />
+                            </div>
+                          </div>
+                          <div
+                            className="rounded-md border p-1.5 flex flex-col justify-between"
+                            style={{
+                              backgroundColor: theme.swatches.surface,
+                              borderColor: theme.swatches.border
+                            }}
+                          >
+                            <span
+                              className="w-3 h-3 rounded-sm"
+                              style={{ backgroundColor: `${theme.swatches.accent}25` }}
+                            />
+                            <span
+                              className="h-1.5 w-full rounded-full opacity-70"
+                              style={{ backgroundColor: theme.swatches.text }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Theme Meta & Status */}
+                  <div className="space-y-1.5 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span
+                          className="w-2.5 h-2.5 rounded-full shrink-0"
+                          style={{ backgroundColor: theme.swatches.accent }}
+                        />
+                        <h4 className="text-sm font-extrabold tracking-tight text-slate-900 dark:text-white truncate">
+                          {theme.name}
+                        </h4>
+                      </div>
+                      {isSelected ? (
+                        <span
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold text-white shrink-0"
+                          style={{ backgroundColor: theme.swatches.accent }}
+                        >
+                          <Check className="w-3 h-3" />
+                          Aktif
+                        </span>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold shrink-0 ${
+                            theme.mode === 'dark'
+                              ? 'bg-slate-800 text-slate-300 border border-slate-700'
+                              : 'bg-amber-50 text-amber-800 border border-amber-200'
+                          }`}
+                        >
+                          {theme.mode === 'dark' ? (
+                            <Moon className="w-2.5 h-2.5" />
+                          ) : (
+                            <Sun className="w-2.5 h-2.5" />
+                          )}
+                          {theme.mode === 'dark' ? 'Gelap' : 'Terang'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                      <span>{theme.tagline}</span>
+                      <span>&bull;</span>
+                      <span>{theme.recommendedFor}</span>
+                    </div>
+
+                    <p className="text-[11px] leading-relaxed text-slate-600 dark:text-slate-400">
+                      {theme.description}
+                    </p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ========================================================= */}
       {/* SECTION 1: KEBIJAKAN ANGGARAN & SIKLUS FISKAL KORPORAT     */}

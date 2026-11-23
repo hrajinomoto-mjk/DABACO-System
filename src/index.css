@@ -7,6 +7,121 @@
     --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
     --font-serif: 'Playfair Display', Georgia, Cambria, 'Times New Roman', Times, serif;
+
+    /* Default Theme Tokens (Ajinomoto Crimson Light) */
+    --theme-bg: #f8fafc;
+    --theme-surface: #ffffff;
+    --theme-surface-soft: #f1f5f9;
+    --theme-sidebar-bg: #ffffff;
+    --theme-navbar-bg: rgba(255, 255, 255, 0.94);
+    --theme-border: #e2e8f0;
+    --theme-accent-from: #dc2626;
+    --theme-accent-via: #e11d48;
+    --theme-accent-to: #b91c1c;
+    --theme-accent-text: #dc2626;
+    --theme-accent-soft: rgba(220, 38, 38, 0.1);
+    --theme-accent-border: rgba(220, 38, 38, 0.22);
+    --theme-accent-shadow: rgba(220, 38, 38, 0.25);
+  }
+
+  /* ========================================================= */
+  /* MULTI-THEME TOKEN DEFINITIONS                             */
+  /* ========================================================= */
+
+  html[data-theme="crimson-light"] {
+    --theme-bg: #f8fafc;
+    --theme-surface: #ffffff;
+    --theme-surface-soft: #f1f5f9;
+    --theme-sidebar-bg: #ffffff;
+    --theme-navbar-bg: rgba(255, 255, 255, 0.94);
+    --theme-border: #e2e8f0;
+    --theme-accent-from: #dc2626;
+    --theme-accent-via: #e11d48;
+    --theme-accent-to: #b91c1c;
+    --theme-accent-text: #dc2626;
+    --theme-accent-soft: rgba(220, 38, 38, 0.1);
+    --theme-accent-border: rgba(220, 38, 38, 0.22);
+    --theme-accent-shadow: rgba(220, 38, 38, 0.25);
+  }
+
+  html[data-theme="sapphire-light"] {
+    --theme-bg: #f1f5fb;
+    --theme-surface: #ffffff;
+    --theme-surface-soft: #e8effa;
+    --theme-sidebar-bg: #f8fbff;
+    --theme-navbar-bg: rgba(248, 251, 255, 0.94);
+    --theme-border: #d6e2f2;
+    --theme-accent-from: #1d4ed8;
+    --theme-accent-via: #2563eb;
+    --theme-accent-to: #0369a1;
+    --theme-accent-text: #1d4ed8;
+    --theme-accent-soft: rgba(29, 78, 216, 0.1);
+    --theme-accent-border: rgba(29, 78, 216, 0.24);
+    --theme-accent-shadow: rgba(29, 78, 216, 0.25);
+  }
+
+  html[data-theme="ivory-light"] {
+    --theme-bg: #f6f2ea;
+    --theme-surface: #fffdf9;
+    --theme-surface-soft: #efe9dc;
+    --theme-sidebar-bg: #fbf8f2;
+    --theme-navbar-bg: rgba(251, 248, 242, 0.95);
+    --theme-border: #e4dbcd;
+    --theme-accent-from: #9f1239;
+    --theme-accent-via: #be123c;
+    --theme-accent-to: #b45309;
+    --theme-accent-text: #9f1239;
+    --theme-accent-soft: rgba(159, 18, 57, 0.1);
+    --theme-accent-border: rgba(159, 18, 57, 0.24);
+    --theme-accent-shadow: rgba(159, 18, 57, 0.24);
+  }
+
+  html[data-theme="midnight-dark"] {
+    --theme-bg: #080c14;
+    --theme-surface: #0f1624;
+    --theme-surface-soft: #151e30;
+    --theme-sidebar-bg: #0a0e17;
+    --theme-navbar-bg: rgba(9, 13, 22, 0.94);
+    --theme-border: rgba(30, 41, 59, 0.85);
+    --theme-accent-from: #dc2626;
+    --theme-accent-via: #e11d48;
+    --theme-accent-to: #b91c1c;
+    --theme-accent-text: #f87171;
+    --theme-accent-soft: rgba(239, 68, 68, 0.14);
+    --theme-accent-border: rgba(239, 68, 68, 0.28);
+    --theme-accent-shadow: rgba(220, 38, 38, 0.28);
+  }
+
+  html[data-theme="emerald-dark"] {
+    --theme-bg: #061210;
+    --theme-surface: #0b1e1b;
+    --theme-surface-soft: #102a25;
+    --theme-sidebar-bg: #071714;
+    --theme-navbar-bg: rgba(7, 23, 20, 0.94);
+    --theme-border: rgba(23, 56, 50, 0.9);
+    --theme-accent-from: #059669;
+    --theme-accent-via: #10b981;
+    --theme-accent-to: #0d9488;
+    --theme-accent-text: #34d399;
+    --theme-accent-soft: rgba(16, 185, 129, 0.14);
+    --theme-accent-border: rgba(16, 185, 129, 0.3);
+    --theme-accent-shadow: rgba(16, 185, 129, 0.28);
+  }
+
+  html[data-theme="obsidian-dark"] {
+    --theme-bg: #0c0c0f;
+    --theme-surface: #16161c;
+    --theme-surface-soft: #1e1e26;
+    --theme-sidebar-bg: #101014;
+    --theme-navbar-bg: rgba(16, 16, 20, 0.94);
+    --theme-border: rgba(39, 39, 50, 0.95);
+    --theme-accent-from: #d97706;
+    --theme-accent-via: #f59e0b;
+    --theme-accent-to: #b45309;
+    --theme-accent-text: #fbbf24;
+    --theme-accent-soft: rgba(245, 158, 11, 0.14);
+    --theme-accent-border: rgba(245, 158, 11, 0.3);
+    --theme-accent-shadow: rgba(217, 119, 6, 0.28);
   }
 
   html {
@@ -21,7 +136,8 @@
   body {
     font-family: var(--font-sans);
     letter-spacing: -0.012em;
-    color: #0f172a; /* Slate 900: High-contrast crisp text in normal mode */
+    color: #0f172a;
+    background-color: var(--theme-bg);
   }
 
   html.dark {
@@ -29,7 +145,8 @@
   }
 
   .dark body {
-    color: #f1f5f9; /* Slate 100 in dark mode */
+    color: #f1f5f9;
+    background-color: var(--theme-bg);
   }
 
   /* High-contrast normal mode typography enhancements */
@@ -43,7 +160,7 @@
 
   html:not(.dark) body {
     color: #0f172a;
-    background-color: #f8fafc;
+    background-color: var(--theme-bg);
     font-weight: 450;
   }
 
@@ -61,53 +178,53 @@
 
   /* Make muted and secondary text thicker and richer in normal mode */
   html:not(.dark) .text-slate-400 {
-    color: #475569 !important; /* Deep Slate 600 instead of washed-out gray */
+    color: #475569 !important;
     font-weight: 500;
   }
 
   html:not(.dark) .text-slate-500 {
-    color: #1e293b !important; /* Rich Slate 800 for high-contrast readability */
+    color: #1e293b !important;
     font-weight: 600;
   }
 
   html:not(.dark) .text-slate-600 {
-    color: #0f172a !important; /* Deep Obsidian Slate 900 */
+    color: #0f172a !important;
     font-weight: 600;
   }
 
   html:not(.dark) .text-slate-700 {
-    color: #020617 !important; /* Pure Dark Slate 950 */
+    color: #020617 !important;
     font-weight: 700;
   }
 
   /* Vibrant, attractive accent typography in normal mode */
   html:not(.dark) .text-red-600,
   html:not(.dark) .text-red-500 {
-    color: #b91c1c; /* Deep Rich Ajinomoto Crimson */
+    color: #b91c1c;
     font-weight: 700;
   }
 
   html:not(.dark) .text-emerald-600,
   html:not(.dark) .text-emerald-500 {
-    color: #047857; /* Deep Jewel Emerald */
+    color: #047857;
     font-weight: 700;
   }
 
   html:not(.dark) .text-blue-600,
   html:not(.dark) .text-blue-500 {
-    color: #1d4ed8; /* Deep Royal Sapphire Blue */
+    color: #1d4ed8;
     font-weight: 700;
   }
 
   html:not(.dark) .text-amber-600,
   html:not(.dark) .text-amber-500 {
-    color: #b45309; /* Deep Warm Amber */
+    color: #b45309;
     font-weight: 700;
   }
 
   html:not(.dark) .text-indigo-600,
   html:not(.dark) .text-indigo-500 {
-    color: #4338ca; /* Deep Vibrant Indigo */
+    color: #4338ca;
     font-weight: 700;
   }
 
@@ -148,20 +265,19 @@
 
   .presentation-deck-dark p,
   .presentation-deck-dark span {
-    /* Prevent washed-out dark mode text */
     text-rendering: optimizeLegibility;
   }
 
   .presentation-deck-dark .text-slate-400 {
-    color: #e2e8f0 !important; /* Boost faint slate-400 to high-contrast slate-200 */
+    color: #e2e8f0 !important;
   }
 
   .presentation-deck-dark .text-slate-500 {
-    color: #cbd5e1 !important; /* Boost faint slate-500 to clear slate-300 */
+    color: #cbd5e1 !important;
   }
 
   .presentation-deck-dark .text-slate-600 {
-    color: #cbd5e1 !important; /* Safeguard any slate-600 to clear slate-300 */
+    color: #cbd5e1 !important;
   }
 
   .presentation-deck-light h1,
@@ -173,6 +289,143 @@
   .presentation-deck-light .deck-heading {
     color: #020617 !important;
   }
+}
+
+/* ========================================================= */
+/* THEME-AWARE STRUCTURAL UTILITIES                          */
+/* ========================================================= */
+
+.dabaco-app-shell {
+  background-color: var(--theme-bg) !important;
+}
+
+.dabaco-sidebar {
+  background-color: var(--theme-sidebar-bg) !important;
+  border-color: var(--theme-border) !important;
+}
+
+.dabaco-navbar {
+  background-color: var(--theme-navbar-bg) !important;
+  border-color: var(--theme-border) !important;
+}
+
+.dabaco-top-accent {
+  background-image: linear-gradient(90deg, var(--theme-accent-from), var(--theme-accent-via), var(--theme-accent-to)) !important;
+}
+
+.dabaco-nav-active {
+  background-image: linear-gradient(90deg, var(--theme-accent-from), var(--theme-accent-via), var(--theme-accent-to)) !important;
+  box-shadow: 0 10px 22px -6px var(--theme-accent-shadow) !important;
+  border-color: var(--theme-accent-border) !important;
+}
+
+.dabaco-avatar-accent {
+  background-image: linear-gradient(135deg, var(--theme-accent-from), var(--theme-accent-via), var(--theme-accent-to)) !important;
+  box-shadow: 0 6px 14px -4px var(--theme-accent-shadow) !important;
+}
+
+.dabaco-brand-text {
+  background-image: linear-gradient(90deg, var(--theme-accent-from), var(--theme-accent-via), var(--theme-accent-to)) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  color: transparent !important;
+}
+
+.dabaco-badge-accent {
+  background-color: var(--theme-accent-soft) !important;
+  color: var(--theme-accent-text) !important;
+  border-color: var(--theme-accent-border) !important;
+}
+
+.dabaco-dot-accent {
+  background-color: var(--theme-accent-from) !important;
+}
+
+/* ========================================================= */
+/* COHESIVE SYSTEM-WIDE PALETTE ADAPTATION PER THEME         */
+/* ========================================================= */
+
+/* Nordic Sapphire (Light) */
+html[data-theme="sapphire-light"] .bg-slate-50,
+html[data-theme="sapphire-light"] .bg-\[\#f8fafc\] {
+  background-color: #f1f5fb !important;
+}
+html[data-theme="sapphire-light"] .border-slate-200,
+html[data-theme="sapphire-light"] .border-slate-200\/90,
+html[data-theme="sapphire-light"] .border-slate-200\/80 {
+  border-color: #d6e2f2 !important;
+}
+html[data-theme="sapphire-light"] .bg-slate-100,
+html[data-theme="sapphire-light"] .bg-slate-100\/80 {
+  background-color: #e8effa !important;
+}
+
+/* Warm Ivory Executive (Light) */
+html[data-theme="ivory-light"] .bg-slate-50,
+html[data-theme="ivory-light"] .bg-\[\#f8fafc\] {
+  background-color: #f6f2ea !important;
+}
+html[data-theme="ivory-light"] .bg-white,
+html[data-theme="ivory-light"] .bg-white\/90 {
+  background-color: #fffdf9 !important;
+}
+html[data-theme="ivory-light"] .border-slate-200,
+html[data-theme="ivory-light"] .border-slate-200\/90,
+html[data-theme="ivory-light"] .border-slate-200\/80,
+html[data-theme="ivory-light"] .border-slate-100 {
+  border-color: #e4dbcd !important;
+}
+html[data-theme="ivory-light"] .bg-slate-100,
+html[data-theme="ivory-light"] .bg-slate-100\/80 {
+  background-color: #efe9dc !important;
+}
+
+/* Emerald Vault (Dark) */
+html[data-theme="emerald-dark"] .bg-\[\#080c14\],
+html[data-theme="emerald-dark"] .bg-\[\#090d16\],
+html[data-theme="emerald-dark"] .bg-\[\#0a0e17\],
+html[data-theme="emerald-dark"] .dark\:bg-slate-950 {
+  background-color: #061210 !important;
+}
+html[data-theme="emerald-dark"] .dark\:bg-slate-900,
+html[data-theme="emerald-dark"] .bg-\[\#0f1422\],
+html[data-theme="emerald-dark"] .bg-slate-900 {
+  background-color: #0b1e1b !important;
+}
+html[data-theme="emerald-dark"] .dark\:bg-slate-800,
+html[data-theme="emerald-dark"] .dark\:bg-slate-800\/60,
+html[data-theme="emerald-dark"] .bg-slate-800\/80 {
+  background-color: #102a25 !important;
+}
+html[data-theme="emerald-dark"] .dark\:border-slate-800,
+html[data-theme="emerald-dark"] .border-slate-800,
+html[data-theme="emerald-dark"] .border-slate-800\/80,
+html[data-theme="emerald-dark"] .dark\:border-slate-700\/80 {
+  border-color: #173832 !important;
+}
+
+/* Obsidian Gold (Dark) */
+html[data-theme="obsidian-dark"] .bg-\[\#080c14\],
+html[data-theme="obsidian-dark"] .bg-\[\#090d16\],
+html[data-theme="obsidian-dark"] .bg-\[\#0a0e17\],
+html[data-theme="obsidian-dark"] .dark\:bg-slate-950 {
+  background-color: #0c0c0f !important;
+}
+html[data-theme="obsidian-dark"] .dark\:bg-slate-900,
+html[data-theme="obsidian-dark"] .bg-\[\#0f1422\],
+html[data-theme="obsidian-dark"] .bg-slate-900 {
+  background-color: #16161c !important;
+}
+html[data-theme="obsidian-dark"] .dark\:bg-slate-800,
+html[data-theme="obsidian-dark"] .dark\:bg-slate-800\/60,
+html[data-theme="obsidian-dark"] .bg-slate-800\/80 {
+  background-color: #1f1f27 !important;
+}
+html[data-theme="obsidian-dark"] .dark\:border-slate-800,
+html[data-theme="obsidian-dark"] .border-slate-800,
+html[data-theme="obsidian-dark"] .border-slate-800\/80,
+html[data-theme="obsidian-dark"] .dark\:border-slate-700\/80 {
+  border-color: #272732 !important;
 }
 
 /* Custom Scrollbars */
